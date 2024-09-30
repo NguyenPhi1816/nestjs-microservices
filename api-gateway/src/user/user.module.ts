@@ -1,14 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
+import { UserController } from './user.controller';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
-import { JwtModule } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
-import { AccessTokenStrategy } from './strategy/access-token.strategy';
 
 @Module({
-  imports: [JwtModule.register({})],
-  controllers: [AuthController],
+  controllers: [UserController],
   providers: [
     {
       provide: 'USER_SERVICE',
@@ -23,8 +19,6 @@ import { AccessTokenStrategy } from './strategy/access-token.strategy';
         });
       },
     },
-    AuthService,
-    AccessTokenStrategy,
   ],
 })
-export class AuthModule {}
+export class UserModule {}

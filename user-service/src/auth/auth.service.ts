@@ -11,6 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { UserRole } from 'src/constrants/enum/user-role.enum';
 import { AccountStatus } from 'src/constrants/enum/account-status.enum';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import AuthResponseDto from './dto/auth-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,10 @@ export class AuthService {
     const account = await this.prisma.account.findUnique({
       where: {
         userPhoneNumber: data.phoneNumber,
+      },
+      include: {
+        user: true,
+        userRole: true,
       },
     });
 
@@ -39,11 +44,16 @@ export class AuthService {
       throw new RpcException(new UnauthorizedException('Password incorrect.'));
     }
 
-    return {
+    const response: AuthResponseDto = {
       id: account.id,
-      phoneNumber: account.userPhoneNumber,
-      roleId: account.roleId,
+      name: account.user.firstName + ' ' + account.user.lastName,
+      email: account.user.email,
+      image: account.user.image,
+      role: account.userRole.name,
+      status: account.status,
     };
+
+    return response;
   }
 
   async register(data: RegisterDto) {
