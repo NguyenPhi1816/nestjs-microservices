@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
 import { ProductModule } from './product/product.module';
-import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -11,10 +8,8 @@ import { MediaModule } from './media/media.module';
       envFilePath: ['.env.local', '.env'],
       isGlobal: true,
     }),
-    AuthModule,
-    UserModule,
     ProductModule,
-    MediaModule,
+    CloudinaryModule,
   ],
 })
 export class AppModule {}

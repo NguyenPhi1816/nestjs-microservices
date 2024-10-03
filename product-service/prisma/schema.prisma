@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int    @id @default(autoincrement())
+  slug        String @unique
+  name        String @unique
+  image       String
+  description String
+  parentId    Int?
+
+  baseProductCategories BaseProductCategory[]
+  parent                Category?             @relation("CategoryParent", fields: [parentId], references: [id])
+  children              Category[]            @relation("CategoryParent")
+}
+
+model BaseProductCategory {
+  categoryId    Int
+  baseProductId Int
+
+  category    Category    @relation(fields: [categoryId], references: [id])
+  baseProduct BaseProduct @relation(fields: [baseProductId], references: [id])
+
+  @@id([categoryId, baseProductId])
+}
+
+model BaseProduct {
+  id          Int    @id @default(autoincrement())
+  slug        String @unique
+  name        String @unique
+  description String
+  status      String
+  brandId     Int
+
+  brand                 Brand                 @relation(fields: [brandId], references: [id])
+  images                BaseProductImage[]
+  baseProductCategories BaseProductCategory[]
+  options               Option[]
+  productVariants       ProductVariant[]
+}
+
+model Brand {
+  id    Int    @id @default(autoincrement())
+  slug  String @unique
+  name  String @unique
+  image String
+
+  baseProducts BaseProduct[]
+}
+
+model BaseProductImage {
+  id            Int     @id @default(autoincrement())
+  path          String
+  isDefault     Boolean
+  baseProductId Int
+
+  baseProduct BaseProduct @relation(fields: [baseProductId], references: [id])
+}
+
+model Option {
+  id            Int    @id @default(autoincrement())
+  name          String
+  baseProductId Int
+
+  baseProduct  BaseProduct   @relation(fields: [baseProductId], references: [id])
+  optionValues OptionValue[]
+
+  @@unique([name, baseProductId])
+}
+
+model OptionValue {
+  id       Int    @id @default(autoincrement())
+  value    String
+  optionId Int
+
+  option              Option               @relation(fields: [optionId], references: [id])
+  optionValueVariants OptionValueVariant[]
+
+  @@unique([optionId, value])
+}
+
+model OptionValueVariant {
+  optionValueId    Int
+  productVariantId Int
+
+  optionValue    OptionValue    @relation(fields: [optionValueId], references: [id])
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@id([optionValueId, productVariantId])
+}
+
+model ProductVariant {
+  id            Int    @id @default(autoincrement())
+  quantity      Int
+  image         String
+  baseProductId Int
+  price Float
+
+  optionValueVariants OptionValueVariant[]
+  baseProduct         BaseProduct          @relation(fields: [baseProductId], references: [id])
+}

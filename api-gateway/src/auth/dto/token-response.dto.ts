@@ -1,6 +1,6 @@
 export default class TokenResponseDto {
   accessToken: string;
-  expires: number;
+  expires: Date;
   user: {
     name: string;
     email: string;

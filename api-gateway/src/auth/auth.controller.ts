@@ -25,7 +25,7 @@ export class AuthController {
 
         const response: TokenResponseDto = {
           accessToken: accessToken,
-          expires: 3600,
+          expires: new Date(Date.now() + 3600000),
           user: {
             id: userInfo.id,
             name: userInfo.name,
