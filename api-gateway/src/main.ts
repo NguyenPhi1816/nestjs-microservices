@@ -6,6 +6,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalFilters(new RpcExceptionFilter());
+  app.enableCors();
+
   await app.listen(process.env.LISTENING_PORT);
 }
 bootstrap();

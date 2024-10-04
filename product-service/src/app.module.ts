@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ProductModule } from './product/product.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { CategoryModule } from './category/category.module';
 
 @Module({
   imports: [
@@ -8,8 +10,9 @@ import { ProductModule } from './product/product.module';
       envFilePath: ['.env.local', '.env'],
       isGlobal: true,
     }),
+    PrismaModule,
     ProductModule,
-    CloudinaryModule,
+    CategoryModule,
   ],
 })
 export class AppModule {}
