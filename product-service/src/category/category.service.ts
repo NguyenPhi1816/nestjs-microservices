@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { normalizeName } from 'src/utils/normalize-name.util';
 import { RpcException } from '@nestjs/microservices';
 import UpdateCategoryDto from './dto/update-category.dto';
+import { CategoryProductsDto } from './dto/category-products.dto';
 
 @Injectable()
 export class CategoryService {
@@ -120,5 +121,113 @@ export class CategoryService {
         throw error;
       }
     }
+  }
+
+  async getCategoryChildren(slug: string) {
+    const category = await this.prisma.category.findUnique({
+      where: {
+        slug: slug,
+      },
+      select: {
+        children: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            image: true,
+            description: true,
+            parent: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+            _count: {
+              select: {
+                baseProductCategories: true,
+                children: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    const response: CategoryResponseDto[] = category.children.map(
+      (category) => {
+        return {
+          id: category.id,
+          slug: category.slug,
+          name: category.name,
+          image: category.image,
+          description: category.description,
+          parent: category.parent,
+          numberOfBaseProduct: category._count.baseProductCategories,
+          numberOfChildren: category._count.children,
+        };
+      },
+    );
+    return response;
+  }
+
+  async getCategoryProducts(slug: string) {
+    const category = await this.prisma.category.findUnique({
+      where: {
+        slug: slug,
+      },
+      select: {
+        baseProductCategories: {
+          select: {
+            baseProduct: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                baseProductCategories: {
+                  select: {
+                    category: {
+                      select: {
+                        id: true,
+                        slug: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+                brand: {
+                  select: {
+                    id: true,
+                    slug: true,
+                    name: true,
+                  },
+                },
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    const response: CategoryProductsDto[] = category.baseProductCategories.map(
+      (baseProductCategory) => {
+        const product = baseProductCategory.baseProduct;
+        return {
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          category: product.baseProductCategories.map((baseProductCategory) => {
+            const category = baseProductCategory.category;
+            return {
+              id: category.id,
+              slug: category.slug,
+              name: category.name,
+            };
+          }),
+          brand: product.brand,
+          status: product.status,
+        };
+      },
+    );
+    return response;
   }
 }

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Put,
   UploadedFile,
@@ -42,12 +43,23 @@ export class CategoryController {
   @Put()
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor('newImage'))
   async updateCategory(
     @Body() updateCategoryDto: UpdateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
     updateCategoryDto.newImage = file;
     return this.categoryService.updateCategory(updateCategoryDto);
+  }
+
+  @Get('/children/:slug')
+  getCategoryChildren(@Param() param: { slug: string }) {
+    const slug = param.slug;
+    return this.categoryService.getCategoryChildren(slug);
+  }
+
+  @Get('/product/:slug')
+  getCategoryProduct(@Param() param: { slug: string }) {
+    return this.categoryService.getCategoryProducts(param.slug);
   }
 }

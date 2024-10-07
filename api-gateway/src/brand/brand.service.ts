@@ -6,14 +6,14 @@ import {
   RpcException,
   Transport,
 } from '@nestjs/microservices';
-import CreateCategoryDto from './dto/create-category.dto';
+import { CreateBrandDto } from './dto/create-brand.dto';
 import { catchError, firstValueFrom, map, throwError } from 'rxjs';
-import CreateCategoryRequestDto from './dto/create-category-request.dto';
-import UpdateCategoryDto from './dto/update-category.dto';
-import UpdateCategoryRequestDto from './dto/update-category-request.dto';
+import { CreateBrandRequestDto } from './dto/create-brand-request.dto';
+import { UpdateBrandDto } from './dto/update-brand.dto';
+import { UpdateBrandRequestDto } from './dto/update-brand-request.dto';
 
 @Injectable()
-export class CategoryService {
+export class BrandService {
   private productClient: ClientProxy;
   private mediaClient: ClientProxy;
 
@@ -34,12 +34,13 @@ export class CategoryService {
     });
   }
 
-  async getAllCategories() {
-    return this.productClient.send({ cmd: 'get-all-categories' }, {});
+  async getAllBrands() {
+    return this.productClient.send({ cmd: 'get-all-brands' }, {});
   }
 
-  async createCategory(data: CreateCategoryDto) {
+  async createBrand(data: CreateBrandDto) {
     const fileBuffers = [data.image.buffer];
+    console.log(fileBuffers);
     const path: string = await firstValueFrom(
       this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
         catchError((error) =>
@@ -52,13 +53,11 @@ export class CategoryService {
     );
 
     if (!!path) {
-      const request: CreateCategoryRequestDto = {
+      const request: CreateBrandRequestDto = {
         name: data.name,
         image: path,
-        description: data.description,
-        parentId: data.parentId ? Number.parseInt(data.parentId) : null,
       };
-      return this.productClient.send({ cmd: 'create-category' }, request).pipe(
+      return this.productClient.send({ cmd: 'create-brand' }, request).pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response)),
         ),
@@ -69,7 +68,7 @@ export class CategoryService {
     }
   }
 
-  async updateCategory(data: UpdateCategoryDto) {
+  async updateBrand(data: UpdateBrandDto) {
     if (!!data.newImage) {
       const fileBuffers = [data.newImage.buffer];
       const path: string = await firstValueFrom(
@@ -87,14 +86,12 @@ export class CategoryService {
       }
     }
 
-    const request: UpdateCategoryRequestDto = {
+    const request: UpdateBrandRequestDto = {
       id: Number.parseInt(data.id),
       name: data.name,
       image: data.existImage,
-      description: data.description,
-      parentId: data.parentId ? Number.parseInt(data.parentId) : null,
     };
-    return this.productClient.send({ cmd: 'update-category' }, request).pipe(
+    return this.productClient.send({ cmd: 'update-brand' }, request).pipe(
       catchError((error) => throwError(() => new RpcException(error.response))),
       map(async (response) => {
         return response;
@@ -102,11 +99,7 @@ export class CategoryService {
     );
   }
 
-  getCategoryChildren(slug: string) {
-    return this.productClient.send({ cmd: 'get-category-children' }, slug);
-  }
-
-  getCategoryProducts(slug: string) {
-    return this.productClient.send({ cmd: 'get-category-products' }, slug);
+  async getBrandProducts(slug: string) {
+    return this.productClient.send({ cmd: 'get-brand-products' }, slug);
   }
 }

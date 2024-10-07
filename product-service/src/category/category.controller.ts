@@ -22,4 +22,14 @@ export class CategoryController {
   updateCategory(data: UpdateCategoryDto) {
     return this.categoryService.updateCategory(data);
   }
+
+  @MessagePattern({ cmd: 'get-category-children' })
+  getCategoryChildren(slug: string) {
+    return this.categoryService.getCategoryChildren(slug);
+  }
+
+  @MessagePattern({ cmd: 'get-category-products' })
+  getCategoryProducts(slug: string) {
+    return this.categoryService.getCategoryProducts(slug);
+  }
 }

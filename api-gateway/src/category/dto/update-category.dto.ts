@@ -1,5 +1,5 @@
 export default class UpdateCategoryDto {
-  id: number;
+  id: string;
   name: string;
   existImage: string;
   newImage: Express.Multer.File;

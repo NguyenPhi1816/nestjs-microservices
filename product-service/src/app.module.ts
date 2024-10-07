@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ProductModule } from './product/product.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CategoryModule } from './category/category.module';
+import { BrandModule } from './brand/brand.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
@@ -11,8 +12,9 @@ import { CategoryModule } from './category/category.module';
       isGlobal: true,
     }),
     PrismaModule,
-    ProductModule,
     CategoryModule,
+    BrandModule,
+    ProductModule,
   ],
 })
 export class AppModule {}
