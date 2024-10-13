@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsArray, IsInt, IsNotEmpty, ValidateNested } from 'class-validator';
 import { OptionValuesDto } from './option-values.dto';
 
-export class CreateOptionValuesDto {
+export class Create_OVs {
   @IsInt()
   @IsNotEmpty()
   baseProductId: number;

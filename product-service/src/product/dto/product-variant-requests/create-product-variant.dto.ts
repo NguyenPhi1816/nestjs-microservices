@@ -7,7 +7,7 @@ import {
   Min,
 } from 'class-validator';
 
-export class CreateProductVariantDto {
+export class Create_PV_Req {
   @IsInt()
   @IsNotEmpty()
   baseProductId: number;

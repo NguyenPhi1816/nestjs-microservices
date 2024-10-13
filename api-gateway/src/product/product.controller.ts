@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   UploadedFile,
   UploadedFiles,
@@ -25,6 +26,11 @@ export class ProductController {
   @Get('products')
   getAllBaseProducts() {
     return this.productService.getAllBaseProducts();
+  }
+
+  @Get('products/:slug')
+  getBySlug(@Param() param: { slug: string }) {
+    return this.productService.getBySlug(param.slug);
   }
 
   @Post('products')

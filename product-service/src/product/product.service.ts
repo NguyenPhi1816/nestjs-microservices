@@ -1,20 +1,28 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { BaseProductImagesResponseDto } from './dto/base-product-image-response.dto';
-import { BaseProductResponseDto } from './dto/base-product-response.dto';
 import { normalizeName } from 'src/utils/normalize-name.util';
 import { BaseProductStatus } from 'src/constants/base-product-status.enum';
-import { CreateBaseProductDto } from './dto/create-base-product.dto';
 import { RpcException } from '@nestjs/microservices';
-import { CreateOptionValuesDto } from './dto/create-option-values.dto';
-import { OptionValuesResponseDto } from './dto/option-values-response.dto';
-import { OptionValuesDto } from './dto/option-values.dto';
-import { OptionValue } from '@prisma/client';
-import { ValueResponseDto } from './dto/value-resoponse.dto';
-import { CreateProductVariantDto } from './dto/create-product-variant.dto';
-import { ProductVariantResponseDto } from './dto/product-variant-response.dto';
-import { OptionValueResponseDto } from './dto/option-value-response.dto';
 import { BaseProductDAO } from './product.dao';
+import { Create_BP_Req } from './dto/base-product-requests/create-BP.dto';
+import Create_BP_Result from './dto/base-product-results/create-BP-result.dto';
+import { Create_BP_Cate_Result } from './dto/base-product-results/create-BP-cate-result.dto';
+import { List_BP_Admin_Res } from './dto/base-product-responses/list-BP-admin.dto';
+import { Create_OVs } from './dto/option-value-requests/create-OVs.dto';
+import { OptionValuesDto } from './dto/option-value-requests/option-values.dto';
+import { OptionValue } from '@prisma/client';
+import { Value_Res } from './dto/option-value-responses/value.dto';
+import { PV_Res } from './dto/product-variant-responses/PV.dto';
+import { Create_PV_Req } from './dto/product-variant-requests/create-product-variant.dto';
+import Create_PV_Result from './dto/product-variant-result/create-PV-result.dto';
+import { OV_Res } from './dto/option-value-responses/OV.dto';
+import { Detail_BP_Admin_Res } from './dto/base-product-responses/detail-BP-admin.dto';
+import { Create_OVs_Res } from './dto/option-value-responses/create-OVs.dto';
 
 @Injectable()
 export class ProductService {
@@ -23,64 +31,44 @@ export class ProductService {
     private baseProductDAO: BaseProductDAO,
   ) {}
 
-  async getAllBaseProduct(): Promise<BaseProductResponseDto[]> {
+  async getAllBaseProduct(): Promise<List_BP_Admin_Res[]> {
     try {
-      const baseProducts = await this.baseProductDAO.findAllBaseProducts();
-
-      const responses: BaseProductResponseDto[] = baseProducts.map((item) => {
-        const categories: string[] = item.baseProductCategories.map(
-          (baseProductCategory) => baseProductCategory.category.name,
-        );
-
-        return {
-          id: item.id,
-          slug: item.slug,
-          name: item.name,
-          categories: categories,
-          brand: item.brand.name,
-          status: item.status,
-        };
-      });
+      const responses: List_BP_Admin_Res[] =
+        await this.baseProductDAO.findAllBaseProducts();
       return responses;
     } catch (error) {
-      throw error;
+      throw new RpcException(new BadRequestException(error.message));
     }
   }
 
-  async createBaseProduct(
-    createBaseProductDto: CreateBaseProductDto,
-  ): Promise<BaseProductResponseDto> {
+  async createBaseProduct(data: Create_BP_Req): Promise<List_BP_Admin_Res> {
     try {
       // start transaction for multi query
       const newBaseProduct = await this.prisma.$transaction(async (prisma) => {
         // save base product
-        const createBaseProductData = {
-          name: createBaseProductDto.name,
-          slug: normalizeName(createBaseProductDto.name),
-          description: createBaseProductDto.description,
+        const payload = {
+          name: data.name,
+          slug: normalizeName(data.name),
+          description: data.description,
           status: BaseProductStatus.ACTIVE,
-          brandId: createBaseProductDto.brandId,
+          brandId: data.brandId,
         };
-        const baseProduct = await this.baseProductDAO.createBaseProduct(
-          createBaseProductData,
-          prisma,
-        );
+        const baseProduct: Create_BP_Result =
+          await this.baseProductDAO.createBaseProduct(payload, prisma);
 
         // add product to category
-        const baseProductCategoryPromises =
-          createBaseProductDto.categoryIds.map((categoryId) =>
-            this.baseProductDAO.addProductToCategory(
-              baseProduct.id,
-              categoryId,
-              prisma,
-            ),
-          );
-        const baseProductCategories = await Promise.all(
-          baseProductCategoryPromises,
+        const BP_Cates_Promises = data.categoryIds.map((categoryId) =>
+          this.baseProductDAO.addProductToCategory(
+            baseProduct.id,
+            categoryId,
+            prisma,
+          ),
         );
+        const BP_Cates: Create_BP_Cate_Result[] =
+          await Promise.all(BP_Cates_Promises);
 
         // save all images from base product
-        const imagePromises = createBaseProductDto.images.map((path, index) =>
+        const BP_Images_Promises = data.images.map((path, index) =>
           this.baseProductDAO.addProductImage(
             baseProduct.id,
             path,
@@ -88,69 +76,57 @@ export class ProductService {
             prisma,
           ),
         );
-        await Promise.all(imagePromises);
+        await Promise.all(BP_Images_Promises);
 
-        const response: BaseProductResponseDto = {
+        const response: List_BP_Admin_Res = {
           id: baseProduct.id,
           slug: baseProduct.slug,
           name: baseProduct.name,
           status: baseProduct.status,
-          categories: baseProductCategories.map(
-            (baseProductCategory) => baseProductCategory.category.name,
-          ),
-          brand: baseProduct.brand.name,
+          categories: BP_Cates.map((bpc) => bpc.name),
+          brand: baseProduct.brand,
         };
         return response;
       });
       return newBaseProduct;
     } catch (error) {
-      console.log(error.code);
-
       if (error.code === 'P2002') {
         throw new RpcException(
           new ConflictException('Product name must be unique'),
         );
       } else {
-        throw error;
+        throw new RpcException(new BadRequestException(error.message));
       }
     }
   }
 
-  async createOptionValues(
-    createOptionValuesRequestDto: CreateOptionValuesDto,
-  ): Promise<OptionValuesResponseDto[]> {
+  async createOptionValues(data: Create_OVs): Promise<Create_OVs_Res[]> {
     try {
       // begin a transaction
       const newOptionValues = await this.prisma.$transaction(async (prisma) => {
         // save all options
-        const options: string[] = createOptionValuesRequestDto.optionValues.map(
-          (optionValue) => optionValue.option,
-        );
-
-        const createOptionQueries = options.map((option) =>
-          prisma.option.create({
-            data: {
-              baseProductId: createOptionValuesRequestDto.baseProductId,
-              name: option,
-            },
-          }),
+        const createOptionQueries = data.optionValues.map((optionValue) =>
+          this.baseProductDAO.createOption(
+            optionValue.option,
+            data.baseProductId,
+            prisma,
+          ),
         );
         const savedOptions = await Promise.all(createOptionQueries);
 
-        // save all option values
+        // save all value
         const createOptionValuesQueries = [];
         savedOptions.map((savedOption) => {
-          const optionValues: OptionValuesDto =
-            createOptionValuesRequestDto.optionValues.find(
-              (optionValue) => optionValue.option === savedOption.name,
-            );
+          const optionValues: OptionValuesDto = data.optionValues.find(
+            (optionValue) => optionValue.option === savedOption.name,
+          );
           optionValues.values.map((value) => {
-            const createOptionValuesQuery = prisma.optionValue.create({
-              data: {
-                optionId: savedOption.id,
-                value: value,
-              },
-            });
+            const createOptionValuesQuery =
+              this.baseProductDAO.createOptionValue(
+                savedOption.id,
+                value,
+                prisma,
+              );
             createOptionValuesQueries.push(createOptionValuesQuery);
           });
         });
@@ -159,99 +135,101 @@ export class ProductService {
         );
 
         // prepare a response
-        const response: OptionValuesResponseDto[] = savedOptions.map(
-          (savedOption) => {
-            const values: ValueResponseDto[] = [];
-            savedOptionValues.forEach((savedOptionValue) => {
-              if (savedOptionValue.optionId === savedOption.id) {
-                values.push({
-                  valueId: savedOptionValue.id,
-                  valueName: savedOptionValue.value,
-                });
-              }
-            });
-            return {
-              optionId: savedOption.id,
-              optionName: savedOption.name,
-              values: values,
-            };
-          },
-        );
+        const response: Create_OVs_Res[] = savedOptions.map((savedOption) => {
+          const values: Value_Res[] = [];
+          savedOptionValues.forEach((savedOptionValue) => {
+            if (savedOptionValue.optionId === savedOption.id) {
+              values.push({
+                valueId: savedOptionValue.id,
+                valueName: savedOptionValue.value,
+              });
+            }
+          });
+          return {
+            optionId: savedOption.id as number,
+            optionName: savedOption.name as string,
+            values: values,
+          };
+        });
         return response;
       });
       return newOptionValues;
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Option already exists.');
+        throw new RpcException(new ConflictException('Option already exists.'));
       } else {
-        throw error;
+        throw new RpcException(new BadRequestException(error.message));
       }
     }
   }
 
-  async createProductVariant(
-    createProductVariantRequestDto: CreateProductVariantDto,
-  ): Promise<ProductVariantResponseDto> {
+  async createProductVariant(data: Create_PV_Req): Promise<PV_Res> {
     try {
       const response = await this.prisma.$transaction(async (prisma) => {
-        const productVariant = await prisma.productVariant.create({
-          data: {
-            baseProductId: createProductVariantRequestDto.baseProductId,
-            image: createProductVariantRequestDto.image,
-            quantity: createProductVariantRequestDto.quantity,
-            price: createProductVariantRequestDto.price,
-          },
-          select: {
-            id: true,
-            image: true,
-            quantity: true,
-            price: true,
-          },
-        });
-
-        const optionValueVariantPromises =
-          createProductVariantRequestDto.optionValueIds.map((optionValueId) =>
-            prisma.optionValueVariant.create({
-              data: {
-                optionValueId: optionValueId,
-                productVariantId: productVariant.id,
-              },
-              select: {
-                optionValue: {
-                  select: {
-                    value: true,
-                    option: {
-                      select: {
-                        name: true,
-                      },
-                    },
-                  },
-                },
-              },
-            }),
+        const productVariant: Create_PV_Result =
+          await this.baseProductDAO.createProductVariant(
+            data.baseProductId,
+            data.image,
+            data.quantity,
+            prisma,
           );
+
+        const optionValueVariantPromises = data.optionValueIds.map(
+          (optionValueId) =>
+            this.baseProductDAO.createOptionValueVariant(
+              optionValueId,
+              productVariant.id,
+              prisma,
+            ),
+        );
 
         const optionValueVariants = await Promise.all(
           optionValueVariantPromises,
         );
-        const optionValue: OptionValueResponseDto[] = optionValueVariants.map(
+        const optionValue: OV_Res[] = optionValueVariants.map(
           (optionValueVariant) => {
             return {
-              option: optionValueVariant.optionValue.option.name,
-              value: optionValueVariant.optionValue.value,
+              option: optionValueVariant.option,
+              value: optionValueVariant.value,
             };
           },
         );
-        const response: ProductVariantResponseDto = {
+
+        const price = await this.baseProductDAO.createProductVariantPrice(
+          productVariant.id,
+          data.price,
+          prisma,
+        );
+
+        const response: PV_Res = {
           ...productVariant,
           optionValue,
+          price: price,
         };
 
         return response;
       });
       return response;
     } catch (error) {
-      throw error;
+      throw new RpcException(new BadRequestException(error.message));
+    }
+  }
+
+  async getBySlugAdmin(slug: string): Promise<Detail_BP_Admin_Res> {
+    try {
+      // query by slug
+      const product =
+        await this.baseProductDAO.getBaseProductDetailBySlugAdmin(slug);
+
+      if (!product) {
+        throw new RpcException(
+          new NotFoundException('Không tìm thấy sản phẩm'),
+        );
+      }
+
+      return product;
+    } catch (error) {
+      throw new RpcException(new BadRequestException(error.message));
     }
   }
 }

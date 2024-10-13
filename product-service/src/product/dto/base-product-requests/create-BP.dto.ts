@@ -7,7 +7,7 @@ import {
   IsUrl,
 } from 'class-validator';
 
-export class CreateBaseProductDto {
+export class Create_BP_Req {
   @IsString()
   @IsNotEmpty()
   name: string;

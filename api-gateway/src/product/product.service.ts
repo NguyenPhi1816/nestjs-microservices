@@ -39,6 +39,20 @@ export class ProductService {
     return this.productClient.send({ cmd: 'get-all-base-products' }, {});
   }
 
+  getBySlug(slug: string) {
+    return this.productClient
+      .send({ cmd: 'get-base-product-by-slug' }, slug)
+      .pipe(
+        catchError((error) => {
+          console.log(error);
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      );
+  }
+
   async createBaseProduct(data: CreateBaseProductDto) {
     const fileBuffers = data.images.map((item) => item.buffer);
     const paths: string[] = await firstValueFrom(
@@ -53,14 +67,20 @@ export class ProductService {
     );
 
     if (!!paths) {
+      let categoryIds = [];
+      if (data.categoryIds != null && typeof data.categoryIds == 'string') {
+        categoryIds.push(Number.parseInt(data.categoryIds));
+      } else if (Array.isArray(data.categoryIds)) {
+        categoryIds = data.categoryIds.map((item) => Number.parseInt(item));
+      }
+
       const request: CreateBaseProductRequestDto = {
         name: data.name,
         images: paths,
         description: data.description,
-        categoryIds: data.categoryIds.map((item) => Number.parseInt(item)),
+        categoryIds: categoryIds,
         brandId: Number.parseInt(data.brandId),
       };
-      console.log(request);
       return this.productClient
         .send({ cmd: 'create-base-product' }, request)
         .pipe(
@@ -101,15 +121,26 @@ export class ProductService {
     );
 
     if (!!path) {
+      let optionValueIds = [];
+      if (
+        data.optionValueIds != null &&
+        typeof data.optionValueIds == 'string'
+      ) {
+        optionValueIds.push(Number.parseInt(data.optionValueIds));
+      } else if (Array.isArray(data.optionValueIds)) {
+        optionValueIds = data.optionValueIds.map((optionValue) =>
+          Number.parseInt(optionValue),
+        );
+      }
+
       const request: CreateProductVariantRequestDto = {
         baseProductId: Number.parseInt(data.baseProductId),
         image: path,
         quantity: Number.parseInt(data.quantity),
         price: Number.parseFloat(data.price),
-        optionValueIds: data.optionValueIds.map((optionValue) =>
-          Number.parseInt(optionValue),
-        ),
+        optionValueIds: optionValueIds,
       };
+
       return this.productClient
         .send({ cmd: 'create-product-variant' }, request)
         .pipe(

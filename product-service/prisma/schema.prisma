@@ -43,6 +43,7 @@ model BaseProduct {
   description String
   status      String
   brandId     Int
+  view        Int    @default(0)
 
   brand                 Brand                 @relation(fields: [brandId], references: [id])
   images                BaseProductImage[]
@@ -106,8 +107,18 @@ model ProductVariant {
   quantity      Int
   image         String
   baseProductId Int
-  price Float
 
   optionValueVariants OptionValueVariant[]
   baseProduct         BaseProduct          @relation(fields: [baseProductId], references: [id])
+  prices              Price[]
+}
+
+model Price {
+  createdAt        DateTime @default(now())
+  price            Float
+  productVariantId Int
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@unique([productVariantId, createdAt])
 }
