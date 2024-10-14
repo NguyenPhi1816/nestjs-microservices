@@ -4,4 +4,5 @@ export type CreateBaseProductDto = {
   categoryIds: string[];
   brandId: string;
   images: Express.Multer.File[];
+  mainImageId: string;
 };

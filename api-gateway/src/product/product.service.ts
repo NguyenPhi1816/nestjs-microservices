@@ -80,6 +80,7 @@ export class ProductService {
         description: data.description,
         categoryIds: categoryIds,
         brandId: Number.parseInt(data.brandId),
+        mainImageId: Number.parseInt(data.mainImageId),
       };
       return this.productClient
         .send({ cmd: 'create-base-product' }, request)

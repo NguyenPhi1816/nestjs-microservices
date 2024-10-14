@@ -29,4 +29,8 @@ export class Create_BP_Req {
   @ArrayMinSize(1)
   @IsUrl({}, { each: true })
   images: string[];
+
+  @IsInt()
+  @IsNotEmpty()
+  mainImageId: number;
 }

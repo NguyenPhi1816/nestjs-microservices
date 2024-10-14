@@ -4,4 +4,5 @@ export class CreateBaseProductRequestDto {
   categoryIds: number[];
   brandId: number;
   images: string[];
+  mainImageId: number;
 }

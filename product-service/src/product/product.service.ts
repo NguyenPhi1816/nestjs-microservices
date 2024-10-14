@@ -72,7 +72,7 @@ export class ProductService {
           this.baseProductDAO.addProductImage(
             baseProduct.id,
             path,
-            index === 0,
+            index === data.mainImageId,
             prisma,
           ),
         );
