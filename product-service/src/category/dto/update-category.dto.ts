@@ -15,6 +15,10 @@ export default class UpdateCategoryDto {
 
   @IsString()
   @IsNotEmpty()
+  imageId: string;
+
+  @IsString()
+  @IsNotEmpty()
   description: string;
 
   @IsInt()

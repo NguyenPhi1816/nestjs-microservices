@@ -1,6 +1,8 @@
 import {
   Controller,
+  Delete,
   Inject,
+  Param,
   Post,
   UploadedFiles,
   UseInterceptors,

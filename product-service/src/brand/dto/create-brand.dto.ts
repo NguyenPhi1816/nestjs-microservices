@@ -8,4 +8,8 @@ export class CreateBrandDto {
   @IsUrl()
   @IsNotEmpty()
   image: string;
+
+  @IsString()
+  @IsNotEmpty()
+  imageId: string;
 }

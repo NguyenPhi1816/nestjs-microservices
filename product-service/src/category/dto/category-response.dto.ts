@@ -5,6 +5,7 @@ export default class CategoryResponseDto {
   slug: string;
   name: string;
   image: string;
+  imageId: string;
   description: string;
   parent: CategoryParentResponseDto | null;
   numberOfBaseProduct: number;

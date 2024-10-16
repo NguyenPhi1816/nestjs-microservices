@@ -7,11 +7,23 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { CreateBaseProductDto } from './dto/create-product.dto';
-import { catchError, firstValueFrom, map, throwError } from 'rxjs';
-import { CreateBaseProductRequestDto } from './dto/create-base-product-request.dto';
+import {
+  catchError,
+  defaultIfEmpty,
+  firstValueFrom,
+  map,
+  throwError,
+} from 'rxjs';
+import {
+  CreateBaseProductRequestDto,
+  createBPImage,
+} from './dto/create-base-product-request.dto';
 import { CreateOptionValuesDto } from './dto/create-option-values.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { CreateProductVariantRequestDto } from './dto/create-product-variant-request.dto';
+import UploadResponse from './dto/upload-response.dto';
+import AddBPImage from './dto/add-bp-image.dto';
+import Add_BP_Image_Req from './dto/add-bp-image-request.dto';
 
 @Injectable()
 export class ProductService {
@@ -55,18 +67,18 @@ export class ProductService {
 
   async createBaseProduct(data: CreateBaseProductDto) {
     const fileBuffers = data.images.map((item) => item.buffer);
-    const paths: string[] = await firstValueFrom(
+    const UploadRes: UploadResponse[] = await firstValueFrom(
       this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response)),
         ),
         map((response) => {
-          return response.paths;
+          return response as UploadResponse[];
         }),
       ),
     );
 
-    if (!!paths) {
+    if (UploadRes.length > 0) {
       let categoryIds = [];
       if (data.categoryIds != null && typeof data.categoryIds == 'string') {
         categoryIds.push(Number.parseInt(data.categoryIds));
@@ -74,9 +86,13 @@ export class ProductService {
         categoryIds = data.categoryIds.map((item) => Number.parseInt(item));
       }
 
+      const images = UploadRes.map(
+        (item) => ({ id: item.id, image: item.path }) as createBPImage,
+      );
+
       const request: CreateBaseProductRequestDto = {
         name: data.name,
-        images: paths,
+        images: images,
         description: data.description,
         categoryIds: categoryIds,
         brandId: Number.parseInt(data.brandId),
@@ -110,18 +126,18 @@ export class ProductService {
 
   async createProductVariant(data: CreateProductVariantDto) {
     const fileBuffers = [data.image.buffer];
-    const path: string = await firstValueFrom(
+    const UploadRes: UploadResponse[] = await firstValueFrom(
       this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response)),
         ),
         map((response) => {
-          return response.paths[0];
+          return response as UploadResponse[];
         }),
       ),
     );
 
-    if (!!path) {
+    if (UploadRes.length > 0) {
       let optionValueIds = [];
       if (
         data.optionValueIds != null &&
@@ -136,7 +152,8 @@ export class ProductService {
 
       const request: CreateProductVariantRequestDto = {
         baseProductId: Number.parseInt(data.baseProductId),
-        image: path,
+        image: UploadRes[0].path,
+        imageId: UploadRes[0].id,
         quantity: Number.parseInt(data.quantity),
         price: Number.parseFloat(data.price),
         optionValueIds: optionValueIds,
@@ -153,5 +170,71 @@ export class ProductService {
           }),
         );
     }
+  }
+
+  async deleteBPImage(publicId: string) {
+    if (!!publicId) {
+      await firstValueFrom(
+        this.mediaClient.send({ cmd: 'delete-image' }, publicId).pipe(
+          defaultIfEmpty(null), // Trả về null nếu không có phần tử nào
+        ),
+      );
+
+      return this.productClient
+        .send({ cmd: 'delete-base-product-image' }, publicId)
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+        );
+    }
+  }
+
+  async addBPImage(data: AddBPImage) {
+    const fileBuffers = data.images.map((item) => item.buffer);
+    const UploadRes: UploadResponse[] = await firstValueFrom(
+      this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response)),
+        ),
+        map((response) => {
+          return response as UploadResponse[];
+        }),
+      ),
+    );
+
+    if (UploadRes.length > 0) {
+      const images = UploadRes.map(
+        (item) => ({ id: item.id, image: item.path }) as createBPImage,
+      );
+
+      const request: Add_BP_Image_Req = {
+        baseProductId: Number.parseInt(data.baseProductId),
+        images: images,
+      };
+
+      return this.productClient
+        .send({ cmd: 'add-base-product-image' }, request)
+        .pipe(
+          catchError((error) => {
+            console.log(error);
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        );
+    }
+  }
+
+  async setBPMainImage(baseProductId: number, imageId: number) {
+    return this.productClient
+      .send({ cmd: 'set-base-product-main-image' }, { baseProductId, imageId })
+      .pipe(
+        catchError((error) => {
+          console.log(error);
+          return throwError(() => new RpcException(error.response));
+        }),
+      );
   }
 }

@@ -18,6 +18,7 @@ model Category {
   slug        String @unique
   name        String @unique
   image       String
+  imageId     String
   description String
   parentId    Int?
 
@@ -53,10 +54,11 @@ model BaseProduct {
 }
 
 model Brand {
-  id    Int    @id @default(autoincrement())
-  slug  String @unique
-  name  String @unique
-  image String
+  id      Int    @id @default(autoincrement())
+  slug    String @unique
+  name    String @unique
+  image   String
+  imageId String
 
   baseProducts BaseProduct[]
 }
@@ -65,6 +67,7 @@ model BaseProductImage {
   id            Int     @id @default(autoincrement())
   path          String
   isDefault     Boolean
+  publicId      String  @unique
   baseProductId Int
 
   baseProduct BaseProduct @relation(fields: [baseProductId], references: [id])
@@ -106,6 +109,7 @@ model ProductVariant {
   id            Int    @id @default(autoincrement())
   quantity      Int
   image         String
+  imageId       String
   baseProductId Int
 
   optionValueVariants OptionValueVariant[]

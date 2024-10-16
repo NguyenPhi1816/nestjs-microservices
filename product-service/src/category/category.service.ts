@@ -18,6 +18,7 @@ export class CategoryService {
         slug: true,
         name: true,
         image: true,
+        imageId: true,
         description: true,
         parent: {
           select: {
@@ -40,6 +41,7 @@ export class CategoryService {
         slug: category.slug,
         name: category.name,
         image: category.image,
+        imageId: category.imageId,
         description: category.description,
         parent: category.parent,
         numberOfBaseProduct: category._count.baseProductCategories,
@@ -55,6 +57,7 @@ export class CategoryService {
         data: {
           name: dto.name,
           image: dto.image,
+          imageId: dto.imageId,
           slug: normalizeName(dto.name),
           description: dto.description,
           parentId: dto.parentId,
@@ -63,6 +66,7 @@ export class CategoryService {
           id: true,
           slug: true,
           name: true,
+          imageId: true,
           image: true,
           description: true,
           parent: {
@@ -85,6 +89,7 @@ export class CategoryService {
         slug: category.slug,
         name: category.name,
         image: category.image,
+        imageId: category.imageId,
         description: category.description,
         parent: category.parent,
         numberOfBaseProduct: category._count.baseProductCategories,
@@ -109,6 +114,7 @@ export class CategoryService {
           name: updateCategoryDto.name,
           slug: normalizeName(updateCategoryDto.name),
           image: updateCategoryDto.image,
+          imageId: updateCategoryDto.imageId,
           description: updateCategoryDto.description,
           parentId: updateCategoryDto.parentId,
         },
@@ -135,6 +141,7 @@ export class CategoryService {
             slug: true,
             name: true,
             image: true,
+            imageId: true,
             description: true,
             parent: {
               select: {
@@ -160,6 +167,7 @@ export class CategoryService {
           slug: category.slug,
           name: category.name,
           image: category.image,
+          imageId: category.imageId,
           description: category.description,
           parent: category.parent,
           numberOfBaseProduct: category._count.baseProductCategories,

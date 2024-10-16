@@ -16,4 +16,9 @@ export class CloudinaryController {
   async uploadImage(fileBuffers: Buffer[]) {
     return this.cloudinaryService.uploadImages(fileBuffers);
   }
+
+  @MessagePattern({ cmd: 'delete-image' })
+  async deleteImage(publicId: string) {
+    return this.cloudinaryService.deleteImage(publicId);
+  }
 }

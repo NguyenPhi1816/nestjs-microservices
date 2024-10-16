@@ -6,9 +6,12 @@ import {
   IsString,
   IsUrl,
 } from 'class-validator';
-import Create_BP_Image_Req from './create-BP-image.dto';
 
-export class Create_BP_Req {
+export class Update_BP_Req {
+  @IsInt()
+  @IsNotEmpty()
+  id: number;
+
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -27,7 +30,9 @@ export class Create_BP_Req {
   brandId: number;
 
   @IsArray()
-  images: Create_BP_Image_Req[];
+  @ArrayMinSize(1)
+  @IsUrl({}, { each: true })
+  images: string[];
 
   @IsInt()
   @IsNotEmpty()

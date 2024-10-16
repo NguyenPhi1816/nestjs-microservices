@@ -3,6 +3,7 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumber,
+  IsString,
   IsUrl,
   Min,
 } from 'class-validator';
@@ -15,6 +16,10 @@ export class Create_PV_Req {
   @IsUrl()
   @IsNotEmpty()
   image: string;
+
+  @IsString()
+  @IsNotEmpty()
+  imageId: string;
 
   @IsInt()
   @Min(0)

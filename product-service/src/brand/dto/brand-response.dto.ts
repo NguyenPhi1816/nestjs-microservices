@@ -3,5 +3,6 @@ export class BrandResponseDto {
   slug: string;
   name: string;
   image: string;
+  imageId: string;
   numberOfProducts: number;
 }

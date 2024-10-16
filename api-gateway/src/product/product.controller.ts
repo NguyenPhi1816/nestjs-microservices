@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
+  Put,
+  Query,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -18,6 +21,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { CreateBaseProductDto } from './dto/create-product.dto';
 import { CreateOptionValuesDto } from './dto/create-option-values.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
+import AddBPImage from './dto/add-bp-image.dto';
 
 @Controller('api')
 export class ProductController {
@@ -66,5 +70,38 @@ export class ProductController {
   ) {
     createProductVariantDto.image = file;
     return this.productService.createProductVariant(createProductVariantDto);
+  }
+
+  @Delete('products/image')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async deleteBPImage(@Query() param: { id: string }) {
+    return this.productService.deleteBPImage(param.id);
+  }
+
+  @Post('products/image')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @UseInterceptors(FilesInterceptor('images', 10)) // Allow up to 10 images to be uploaded
+  async addBPImage(
+    @Body() data: AddBPImage,
+    @UploadedFiles() files: Express.Multer.File[], // Expect an array of files
+  ) {
+    if (files && files.length > 0) {
+      data.images = files;
+    }
+    return this.productService.addBPImage(data);
+  }
+
+  @Put('products/image')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async setBPMainImage(
+    @Query() params: { baseProductId: string; imageId: string },
+  ) {
+    return this.productService.setBPMainImage(
+      Number.parseInt(params.baseProductId),
+      Number.parseInt(params.imageId),
+    );
   }
 }

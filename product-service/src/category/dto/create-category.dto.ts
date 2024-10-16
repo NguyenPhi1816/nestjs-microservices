@@ -7,6 +7,10 @@ export default class CreateCategoryDto {
 
   @IsString()
   @IsNotEmpty()
+  imageId: string;
+
+  @IsString()
+  @IsNotEmpty()
   image: string;
 
   @IsString()

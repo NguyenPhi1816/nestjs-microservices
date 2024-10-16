@@ -23,6 +23,7 @@ import Create_PV_Result from './dto/product-variant-result/create-PV-result.dto'
 import { OV_Res } from './dto/option-value-responses/OV.dto';
 import { Detail_BP_Admin_Res } from './dto/base-product-responses/detail-BP-admin.dto';
 import { Create_OVs_Res } from './dto/option-value-responses/create-OVs.dto';
+import Add_BP_Image_Req from './dto/base-product-requests/add-BP-image.dto';
 
 @Injectable()
 export class ProductService {
@@ -68,10 +69,11 @@ export class ProductService {
           await Promise.all(BP_Cates_Promises);
 
         // save all images from base product
-        const BP_Images_Promises = data.images.map((path, index) =>
+        const BP_Images_Promises = data.images.map((image, index) =>
           this.baseProductDAO.addProductImage(
             baseProduct.id,
-            path,
+            image.image,
+            image.id,
             index === data.mainImageId,
             prisma,
           ),
@@ -90,6 +92,7 @@ export class ProductService {
       });
       return newBaseProduct;
     } catch (error) {
+      console.log(error);
       if (error.code === 'P2002') {
         throw new RpcException(
           new ConflictException('Product name must be unique'),
@@ -170,6 +173,7 @@ export class ProductService {
           await this.baseProductDAO.createProductVariant(
             data.baseProductId,
             data.image,
+            data.imageId,
             data.quantity,
             prisma,
           );
@@ -232,4 +236,121 @@ export class ProductService {
       throw new RpcException(new BadRequestException(error.message));
     }
   }
+
+  async addBaseProductImage(data: Add_BP_Image_Req) {
+    const BP_Images_Promises = data.images.map((image, index) =>
+      this.baseProductDAO.addProductImage(
+        data.baseProductId,
+        image.image,
+        image.id,
+        false,
+      ),
+    );
+    return await Promise.all(BP_Images_Promises);
+  }
+
+  async deleteBaseProductImage(publicId: string) {
+    try {
+      return await this.baseProductDAO.deleteProductImage(publicId);
+    } catch (error) {
+      throw new RpcException(new NotFoundException('Không tìm thấy hình ảnh'));
+    }
+  }
+
+  async setBPMainImage(baseProductId: number, imageId: number) {
+    const result = await this.baseProductDAO.setBPMainImage(
+      baseProductId,
+      imageId,
+    );
+
+    if (result == -1) {
+      throw new RpcException(new BadRequestException('Có lỗi xảy ra'));
+    }
+
+    return result;
+  }
+
+  // async updateBaseProduct(
+  //   data: UpdateBaseProductDto,
+  // ): Promise<BasicBaseProductResponseDto> {
+  //   try {
+  //     // start transaction for multi query
+  //     const newBaseProduct = await this.prisma.$transaction(async (prisma) => {
+  //       // update base product
+  //       const baseProduct = await prisma.baseProduct.update({
+  //         where: {
+  //           id: updateBaseProduct.id,
+  //         },
+  //         data: {
+  //           name: updateBaseProduct.name,
+  //           slug: normalizeName(updateBaseProduct.name),
+  //           description: updateBaseProduct.description,
+  //           status: BaseProductStatus.ACTIVE,
+  //           brandId: updateBaseProduct.brandId,
+  //         },
+  //         include: {
+  //           brand: true,
+  //         },
+  //       });
+
+  //       // update product category
+  //       await prisma.baseProductCategory.deleteMany({
+  //         where: {
+  //           baseProductId: updateBaseProduct.id,
+  //         },
+  //       });
+  //       const baseProductCategoryPromises = updateBaseProduct.categoryIds.map(
+  //         (categoryId) =>
+  //           prisma.baseProductCategory.create({
+  //             data: { baseProductId: baseProduct.id, categoryId: categoryId },
+  //             include: {
+  //               category: true,
+  //             },
+  //           }),
+  //       );
+  //       const baseProductCategories = await Promise.all(
+  //         baseProductCategoryPromises,
+  //       );
+
+  //       // update base product images
+  //       await prisma.baseProductImage.deleteMany({
+  //         where: {
+  //           baseProductId: updateBaseProduct.id,
+  //         },
+  //       });
+  //       const imagePromises = updateBaseProduct.images.map((path, index) =>
+  //         prisma.baseProductImage.create({
+  //           data: {
+  //             baseProductId: baseProduct.id,
+  //             path: path,
+  //             isDefault: index === 0,
+  //           },
+  //         }),
+  //       );
+  //       const baseProductImages: BaseProductImagesResponseDto[] =
+  //         await Promise.all(imagePromises);
+
+  //       const response: BasicBaseProductResponseDto = {
+  //         id: baseProduct.id,
+  //         slug: baseProduct.slug,
+  //         name: baseProduct.name,
+  //         status: baseProduct.status,
+  //         categories: baseProductCategories.map(
+  //           (baseProductCategory) => baseProductCategory.category.name,
+  //         ),
+  //         brand: baseProduct.brand.name,
+  //       };
+  //       return response;
+  //     });
+  //     return newBaseProduct;
+  //   } catch (error) {
+  //     console.log(error.code);
+
+  //     if (error.code === 'P2002') {
+  //       throw new ConflictException('Product name must be unique');
+  //     } else {
+  //       throw error;
+  //     }
+  //   }
+  // }
 }

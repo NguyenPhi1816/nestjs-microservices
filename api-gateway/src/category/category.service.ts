@@ -7,10 +7,17 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import CreateCategoryDto from './dto/create-category.dto';
-import { catchError, firstValueFrom, map, throwError } from 'rxjs';
+import {
+  catchError,
+  defaultIfEmpty,
+  firstValueFrom,
+  map,
+  throwError,
+} from 'rxjs';
 import CreateCategoryRequestDto from './dto/create-category-request.dto';
 import UpdateCategoryDto from './dto/update-category.dto';
 import UpdateCategoryRequestDto from './dto/update-category-request.dto';
+import UploadResponse from './dto/upload-response.dto';
 
 @Injectable()
 export class CategoryService {
@@ -40,21 +47,22 @@ export class CategoryService {
 
   async createCategory(data: CreateCategoryDto) {
     const fileBuffers = [data.image.buffer];
-    const path: string = await firstValueFrom(
+    const uploadRes: UploadResponse[] = await firstValueFrom(
       this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response)),
         ),
         map((response) => {
-          return response.paths[0];
+          return response as UploadResponse[];
         }),
       ),
     );
 
-    if (!!path) {
+    if (uploadRes.length > 0) {
       const request: CreateCategoryRequestDto = {
         name: data.name,
-        image: path,
+        image: uploadRes[0].path,
+        imageId: uploadRes[0].id,
         description: data.description,
         parentId: data.parentId ? Number.parseInt(data.parentId) : null,
       };
@@ -71,19 +79,32 @@ export class CategoryService {
 
   async updateCategory(data: UpdateCategoryDto) {
     if (!!data.newImage) {
+      // remove exist image from cloudinary
+      if (data.existImageId) {
+        await firstValueFrom(
+          this.mediaClient
+            .send({ cmd: 'delete-image' }, data.existImageId)
+            .pipe(
+              defaultIfEmpty(null), // Trả về null nếu không có phần tử nào
+            ),
+        );
+      }
+
+      // upload new image to cloudinary
       const fileBuffers = [data.newImage.buffer];
-      const path: string = await firstValueFrom(
+      const uploadRes: UploadResponse[] = await firstValueFrom(
         this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
           catchError((error) =>
             throwError(() => new RpcException(error.response)),
           ),
           map((response) => {
-            return response.paths[0];
+            return response as UploadResponse[];
           }),
         ),
       );
-      if (!!path) {
-        data.existImage = path;
+      if (uploadRes.length > 0) {
+        data.existImageId = uploadRes[0].id;
+        data.existImage = uploadRes[0].path;
       }
     }
 
@@ -91,9 +112,13 @@ export class CategoryService {
       id: Number.parseInt(data.id),
       name: data.name,
       image: data.existImage,
+      imageId: data.existImageId,
       description: data.description,
       parentId: data.parentId ? Number.parseInt(data.parentId) : null,
     };
+
+    console.log(request);
+
     return this.productClient.send({ cmd: 'update-category' }, request).pipe(
       catchError((error) => throwError(() => new RpcException(error.response))),
       map(async (response) => {

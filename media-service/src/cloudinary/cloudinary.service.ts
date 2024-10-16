@@ -6,8 +6,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryResponse } from './cloudinary-response';
 import { RpcException } from '@nestjs/microservices';
+import { CloudinaryResponse } from './cloudinary-response';
+import UploadResponse from './dto/response.dto';
 const streamifier = require('streamifier');
 
 @Injectable()
@@ -56,15 +57,50 @@ export class CloudinaryService {
   }
 
   // Hàm upload nhiều file
-  async uploadImages(fileBuffers: Buffer[]) {
+  async uploadImages(fileBuffers: Buffer[]): Promise<UploadResponse[]> {
     const uploadPromises = fileBuffers.map(
       (fileBuffer) => this.uploadFileWithRetry(fileBuffer), // Dùng hàm có retry
     );
 
     const result = await Promise.all(uploadPromises);
 
-    const paths = result.map((item) => item.secure_url);
+    const res: UploadResponse[] = result.map((item) => ({
+      id: item.public_id as string,
+      path: item.secure_url as string,
+    }));
 
-    return { paths };
+    return res;
+  }
+
+  async deleteImage(publicId: string): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      cloudinary.uploader.destroy(publicId, (error, result) => {
+        if (error) {
+          this.logger.error(
+            `Failed to delete image with id ${publicId}:`,
+            error,
+          );
+          return reject(
+            new RpcException(
+              new HttpException('Delete Failed', HttpStatus.BAD_REQUEST),
+            ),
+          );
+        }
+
+        if (result.result !== 'ok') {
+          this.logger.warn(
+            `Delete failed or image not found for id ${publicId}`,
+          );
+          return reject(
+            new RpcException(
+              new HttpException('Delete Failed', HttpStatus.NOT_FOUND),
+            ),
+          );
+        }
+
+        this.logger.log(`Image with id ${publicId} deleted successfully`);
+        resolve();
+      });
+    });
   }
 }

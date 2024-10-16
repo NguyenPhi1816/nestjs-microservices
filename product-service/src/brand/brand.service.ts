@@ -25,6 +25,7 @@ export class BrandService {
       slug: brand.slug,
       name: brand.name,
       image: brand.image,
+      imageId: brand.imageId,
       numberOfProducts: brand._count.baseProducts,
     }));
     return response;
@@ -37,6 +38,7 @@ export class BrandService {
           name: createBrandDto.name,
           slug: normalizeName(createBrandDto.name),
           image: createBrandDto.image,
+          imageId: createBrandDto.imageId,
         },
         include: {
           _count: {
@@ -51,6 +53,7 @@ export class BrandService {
         slug: brand.slug,
         name: brand.name,
         image: brand.image,
+        imageId: brand.imageId,
         numberOfProducts: brand._count.baseProducts,
       };
       return response;
@@ -69,6 +72,7 @@ export class BrandService {
           name: updateBrandDto.name,
           slug: normalizeName(updateBrandDto.name),
           image: updateBrandDto.image,
+          imageId: updateBrandDto.imageId,
         },
         include: {
           _count: {
@@ -83,6 +87,7 @@ export class BrandService {
         slug: brand.slug,
         name: brand.name,
         image: brand.image,
+        imageId: brand.imageId,
         numberOfProducts: brand._count.baseProducts,
       };
       return response;

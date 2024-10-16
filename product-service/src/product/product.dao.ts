@@ -98,15 +98,56 @@ export class BaseProductDAO {
   async addProductImage(
     baseProductId: number,
     image: string,
+    imageId: string,
     isDefault: boolean,
     prisma: any = this.prisma,
   ) {
-    await prisma.baseProductImage.create({
+    return await prisma.baseProductImage.create({
       data: {
         baseProductId,
         path: image,
+        publicId: imageId,
         isDefault,
       },
+      select: {
+        id: true,
+        path: true,
+        publicId: true,
+        isDefault: true,
+      },
+    });
+  }
+
+  async setBPMainImage(baseProductId: number, imageId: number) {
+    try {
+      await this.prisma.$transaction(async (prisma) => {
+        console.log(baseProductId, imageId);
+        // Bước 1: Đặt isDefault = false cho hình ảnh đang là default với baseProductId
+        await prisma.baseProductImage.updateMany({
+          where: {
+            baseProductId: baseProductId,
+            isDefault: true,
+          },
+          data: { isDefault: false },
+        });
+
+        // Bước 2: Đặt isDefault = true cho hình ảnh mới
+        await prisma.baseProductImage.update({
+          where: { id: imageId }, // Đảm bảo bạn chỉ cập nhật ảnh với imageId đúng
+          data: { isDefault: true },
+        });
+      });
+
+      return 1;
+    } catch (error) {
+      console.error('Error setting main image:', error);
+      return -1;
+    }
+  }
+
+  async deleteProductImage(publicId: string) {
+    return this.prisma.baseProductImage.delete({
+      where: { publicId: publicId },
     });
   }
 
@@ -135,6 +176,7 @@ export class BaseProductDAO {
             id: true,
             path: true,
             isDefault: true,
+            publicId: true,
           },
         },
         productVariants: {
@@ -289,6 +331,7 @@ export class BaseProductDAO {
   async createProductVariant(
     baseProductId: number,
     image: string,
+    imageId: string,
     quantity: number,
     prisma: any = this.prisma,
   ): Promise<Create_PV_Result> {
@@ -296,6 +339,7 @@ export class BaseProductDAO {
       data: {
         baseProductId: baseProductId,
         image: image,
+        imageId: imageId,
         quantity: quantity,
       },
       select: {

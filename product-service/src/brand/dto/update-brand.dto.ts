@@ -12,4 +12,8 @@ export class UpdateBrandDto {
   @IsUrl()
   @IsNotEmpty()
   image: string;
+
+  @IsString()
+  @IsNotEmpty()
+  imageId: string;
 }

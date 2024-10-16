@@ -4,6 +4,7 @@ import { MessagePattern } from '@nestjs/microservices';
 import { Create_BP_Req } from './dto/base-product-requests/create-BP.dto';
 import { Create_OVs } from './dto/option-value-requests/create-OVs.dto';
 import { Create_PV_Req } from './dto/product-variant-requests/create-product-variant.dto';
+import Add_BP_Image_Req from './dto/base-product-requests/add-BP-image.dto';
 
 @Controller('product')
 export class ProductController {
@@ -32,5 +33,20 @@ export class ProductController {
   @MessagePattern({ cmd: 'create-product-variant' })
   createProductVariant(data: Create_PV_Req) {
     return this.productService.createProductVariant(data);
+  }
+
+  @MessagePattern({ cmd: 'delete-base-product-image' })
+  deleteBPImage(publicId: string) {
+    return this.productService.deleteBaseProductImage(publicId);
+  }
+
+  @MessagePattern({ cmd: 'add-base-product-image' })
+  addBPImage(data: any) {
+    return this.productService.addBaseProductImage(data);
+  }
+
+  @MessagePattern({ cmd: 'set-base-product-main-image' })
+  setBPMainImage(data: { baseProductId: number; imageId: number }) {
+    return this.productService.setBPMainImage(data.baseProductId, data.imageId);
   }
 }
