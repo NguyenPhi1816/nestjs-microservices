@@ -22,6 +22,7 @@ import { CreateBaseProductDto } from './dto/create-product.dto';
 import { CreateOptionValuesDto } from './dto/create-option-values.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import AddBPImage from './dto/add-bp-image.dto';
+import UpdateProductVariantDto from './dto/update-product-variant.dto';
 
 @Controller('api')
 export class ProductController {
@@ -70,6 +71,18 @@ export class ProductController {
   ) {
     createProductVariantDto.image = file;
     return this.productService.createProductVariant(createProductVariantDto);
+  }
+
+  @Put('product-variants')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('image'))
+  async updateProductVariant(
+    @Body() updateProductVariantDto: UpdateProductVariantDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    updateProductVariantDto.image = file;
+    return this.productService.updateProductVariant(updateProductVariantDto);
   }
 
   @Delete('products/image')

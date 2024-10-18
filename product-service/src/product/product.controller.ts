@@ -5,6 +5,7 @@ import { Create_BP_Req } from './dto/base-product-requests/create-BP.dto';
 import { Create_OVs } from './dto/option-value-requests/create-OVs.dto';
 import { Create_PV_Req } from './dto/product-variant-requests/create-product-variant.dto';
 import Add_BP_Image_Req from './dto/base-product-requests/add-BP-image.dto';
+import UpdateProductVariantDto from './dto/product-variant-requests/update-product-variant.dto';
 
 @Controller('product')
 export class ProductController {
@@ -33,6 +34,11 @@ export class ProductController {
   @MessagePattern({ cmd: 'create-product-variant' })
   createProductVariant(data: Create_PV_Req) {
     return this.productService.createProductVariant(data);
+  }
+
+  @MessagePattern({ cmd: 'update-product-variant' })
+  updateProductVariant(data: UpdateProductVariantDto) {
+    return this.productService.updateVariant(data);
   }
 
   @MessagePattern({ cmd: 'delete-base-product-image' })

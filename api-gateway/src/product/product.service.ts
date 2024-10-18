@@ -24,6 +24,8 @@ import { CreateProductVariantRequestDto } from './dto/create-product-variant-req
 import UploadResponse from './dto/upload-response.dto';
 import AddBPImage from './dto/add-bp-image.dto';
 import Add_BP_Image_Req from './dto/add-bp-image-request.dto';
+import UpdateProductVariantDto from './dto/update-product-variant.dto';
+import UpdateProductVariantRequestDto from './dto/update-product-variant-request.dto';
 
 @Injectable()
 export class ProductService {
@@ -170,6 +172,53 @@ export class ProductService {
           }),
         );
     }
+  }
+
+  async updateProductVariant(data: UpdateProductVariantDto) {
+    if (data.image) {
+      // delete exist image
+      await firstValueFrom(
+        this.mediaClient.send({ cmd: 'delete-image' }, data.imageId).pipe(
+          defaultIfEmpty(null), // Trả về null nếu không có phần tử nào
+        ),
+      );
+
+      const fileBuffers = [data.image.buffer];
+      const UploadRes: UploadResponse[] = await firstValueFrom(
+        this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+          map((response) => {
+            return response as UploadResponse[];
+          }),
+        ),
+      );
+
+      if (UploadRes.length > 0) {
+        data.imageUrl = UploadRes[0].path;
+        data.imageId = UploadRes[0].id;
+      }
+    }
+
+    const request: UpdateProductVariantRequestDto = {
+      productVariantId: Number.parseInt(data.productVariantId),
+      image: data.imageUrl,
+      imageId: data.imageId,
+      quantity: Number.parseInt(data.quantity),
+      price: Number.parseFloat(data.price),
+    };
+
+    return this.productClient
+      .send({ cmd: 'update-product-variant' }, request)
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response)),
+        ),
+        map(async (response) => {
+          return response;
+        }),
+      );
   }
 
   async deleteBPImage(publicId: string) {

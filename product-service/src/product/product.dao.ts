@@ -183,6 +183,7 @@ export class BaseProductDAO {
           select: {
             id: true,
             image: true,
+            imageId: true,
             quantity: true,
             optionValueVariants: {
               select: {
@@ -228,6 +229,7 @@ export class BaseProductDAO {
       return {
         id: variant.id,
         image: variant.image,
+        imageId: variant.imageId,
         quantity: variant.quantity,
         optionValue: optionValue,
         price: variant.prices.length > 0 ? variant.prices[0].price : 0,
@@ -345,7 +347,57 @@ export class BaseProductDAO {
       select: {
         id: true,
         image: true,
+        imageId: true,
         quantity: true,
+      },
+    });
+  }
+
+  async updateProductVariant(
+    productVariantId: number,
+    image: string,
+    imageId: string,
+    quantity: number,
+    prisma: any = this.prisma,
+  ) {
+    return await prisma.productVariant.update({
+      where: {
+        id: productVariantId,
+      },
+      data: {
+        image: image,
+        imageId: imageId,
+        quantity: quantity,
+      },
+      select: {
+        id: true,
+        image: true,
+        imageId: true,
+        quantity: true,
+        optionValueVariants: {
+          select: {
+            optionValue: {
+              select: {
+                value: true,
+                option: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        prices: {
+          take: 1, // Get only the most recent price
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            price: true,
+            createdAt: true,
+          },
+        },
       },
     });
   }

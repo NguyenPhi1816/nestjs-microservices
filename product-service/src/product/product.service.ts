@@ -24,6 +24,7 @@ import { OV_Res } from './dto/option-value-responses/OV.dto';
 import { Detail_BP_Admin_Res } from './dto/base-product-responses/detail-BP-admin.dto';
 import { Create_OVs_Res } from './dto/option-value-responses/create-OVs.dto';
 import Add_BP_Image_Req from './dto/base-product-requests/add-BP-image.dto';
+import UpdateProductVariantDto from './dto/product-variant-requests/update-product-variant.dto';
 
 @Injectable()
 export class ProductService {
@@ -268,6 +269,48 @@ export class ProductService {
     }
 
     return result;
+  }
+
+  async updateVariant(data: UpdateProductVariantDto) {
+    try {
+      const response = await this.prisma.$transaction(async (prisma) => {
+        const productVariant = await this.baseProductDAO.updateProductVariant(
+          data.productVariantId,
+          data.image,
+          data.imageId,
+          data.quantity,
+          prisma,
+        );
+
+        let price = productVariant.prices[0].price;
+        if (price !== data.price) {
+          price = await this.baseProductDAO.createProductVariantPrice(
+            data.productVariantId,
+            data.price,
+            prisma,
+          );
+        }
+
+        const optionValue: OV_Res[] = productVariant.optionValueVariants.map(
+          (optionValueVariant) => {
+            return {
+              option: optionValueVariant.optionValue.option.name,
+              value: optionValueVariant.optionValue.value,
+            };
+          },
+        );
+        const response: PV_Res = {
+          ...productVariant,
+          optionValue,
+          price: price,
+        };
+
+        return response;
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // async updateBaseProduct(
