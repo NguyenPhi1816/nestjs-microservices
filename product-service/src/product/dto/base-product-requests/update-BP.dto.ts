@@ -28,13 +28,4 @@ export class Update_BP_Req {
   @IsInt()
   @IsNotEmpty()
   brandId: number;
-
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsUrl({}, { each: true })
-  images: string[];
-
-  @IsInt()
-  @IsNotEmpty()
-  mainImageId: number;
 }

@@ -23,6 +23,7 @@ import { CreateOptionValuesDto } from './dto/create-option-values.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import AddBPImage from './dto/add-bp-image.dto';
 import UpdateProductVariantDto from './dto/update-product-variant.dto';
+import { Update_BaseProduct_Req } from './dto/update-bp.dto';
 
 @Controller('api')
 export class ProductController {
@@ -42,7 +43,7 @@ export class ProductController {
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @UseInterceptors(FilesInterceptor('images', 10)) // Allow up to 10 images to be uploaded
-  async createCategory(
+  async createProduct(
     @Body() createBaseProductDto: CreateBaseProductDto,
     @UploadedFiles() files: Express.Multer.File[], // Expect an array of files
   ) {
@@ -50,6 +51,23 @@ export class ProductController {
       createBaseProductDto.images = files;
     }
     return this.productService.createBaseProduct(createBaseProductDto);
+  }
+
+  @Put('products')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async updateProduct(@Body() data: Update_BaseProduct_Req) {
+    return this.productService.updateBaseProduct(data);
+  }
+
+  @Put('products/status')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  updateBaseProductStatus(
+    @Body()
+    data: Update_BaseProduct_Req,
+  ) {
+    return this.productService.updateBaseProductStatus(data);
   }
 
   @Post('option-values')

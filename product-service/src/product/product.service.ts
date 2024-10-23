@@ -25,6 +25,10 @@ import { Detail_BP_Admin_Res } from './dto/base-product-responses/detail-BP-admi
 import { Create_OVs_Res } from './dto/option-value-responses/create-OVs.dto';
 import Add_BP_Image_Req from './dto/base-product-requests/add-BP-image.dto';
 import UpdateProductVariantDto from './dto/product-variant-requests/update-product-variant.dto';
+import { Update_BP_Req } from './dto/base-product-requests/update-BP.dto';
+import { Update_BP_Status_Req } from './dto/base-product-requests/update-BP-status.dto';
+import { CreateOrderDetailDto } from './dto/order-detail/create-order-detail.dto';
+import Update_PV_Quantity_Req from './dto/product-variant-requests/update-product-variant-quantity.dto';
 
 @Injectable()
 export class ProductService {
@@ -313,87 +317,145 @@ export class ProductService {
     }
   }
 
-  // async updateBaseProduct(
-  //   data: UpdateBaseProductDto,
-  // ): Promise<BasicBaseProductResponseDto> {
-  //   try {
-  //     // start transaction for multi query
-  //     const newBaseProduct = await this.prisma.$transaction(async (prisma) => {
-  //       // update base product
-  //       const baseProduct = await prisma.baseProduct.update({
-  //         where: {
-  //           id: updateBaseProduct.id,
-  //         },
-  //         data: {
-  //           name: updateBaseProduct.name,
-  //           slug: normalizeName(updateBaseProduct.name),
-  //           description: updateBaseProduct.description,
-  //           status: BaseProductStatus.ACTIVE,
-  //           brandId: updateBaseProduct.brandId,
-  //         },
-  //         include: {
-  //           brand: true,
-  //         },
-  //       });
+  async updateBaseProduct(data: Update_BP_Req): Promise<List_BP_Admin_Res> {
+    try {
+      // start transaction for multi query
+      const newBaseProduct = await this.prisma.$transaction(async (prisma) => {
+        // update base product
+        const baseProduct = await prisma.baseProduct.update({
+          where: {
+            id: data.id,
+          },
+          data: {
+            name: data.name,
+            slug: normalizeName(data.name),
+            description: data.description,
+            status: BaseProductStatus.ACTIVE,
+            brandId: data.brandId,
+          },
+          include: {
+            brand: true,
+          },
+        });
 
-  //       // update product category
-  //       await prisma.baseProductCategory.deleteMany({
-  //         where: {
-  //           baseProductId: updateBaseProduct.id,
-  //         },
-  //       });
-  //       const baseProductCategoryPromises = updateBaseProduct.categoryIds.map(
-  //         (categoryId) =>
-  //           prisma.baseProductCategory.create({
-  //             data: { baseProductId: baseProduct.id, categoryId: categoryId },
-  //             include: {
-  //               category: true,
-  //             },
-  //           }),
-  //       );
-  //       const baseProductCategories = await Promise.all(
-  //         baseProductCategoryPromises,
-  //       );
+        // update product category
+        await prisma.baseProductCategory.deleteMany({
+          where: {
+            baseProductId: data.id,
+          },
+        });
 
-  //       // update base product images
-  //       await prisma.baseProductImage.deleteMany({
-  //         where: {
-  //           baseProductId: updateBaseProduct.id,
-  //         },
-  //       });
-  //       const imagePromises = updateBaseProduct.images.map((path, index) =>
-  //         prisma.baseProductImage.create({
-  //           data: {
-  //             baseProductId: baseProduct.id,
-  //             path: path,
-  //             isDefault: index === 0,
-  //           },
-  //         }),
-  //       );
-  //       const baseProductImages: BaseProductImagesResponseDto[] =
-  //         await Promise.all(imagePromises);
+        const baseProductCategoryPromises = data.categoryIds.map((categoryId) =>
+          prisma.baseProductCategory.create({
+            data: { baseProductId: baseProduct.id, categoryId: categoryId },
+            include: {
+              category: true,
+            },
+          }),
+        );
 
-  //       const response: BasicBaseProductResponseDto = {
-  //         id: baseProduct.id,
-  //         slug: baseProduct.slug,
-  //         name: baseProduct.name,
-  //         status: baseProduct.status,
-  //         categories: baseProductCategories.map(
-  //           (baseProductCategory) => baseProductCategory.category.name,
-  //         ),
-  //         brand: baseProduct.brand.name,
-  //       };
-  //       return response;
-  //     });
-  //     return newBaseProduct;
-  //   } catch (error) {
-  //     console.log(error.code);
+        const baseProductCategories = await Promise.all(
+          baseProductCategoryPromises,
+        );
 
-  //     if (error.code === 'P2002') {
-  //       throw new ConflictException('Product name must be unique');
-  //     } else {
-  //       throw error;
-  //     }
-  //   }
-  // }
+        const response: List_BP_Admin_Res = {
+          id: baseProduct.id,
+          slug: baseProduct.slug,
+          name: baseProduct.name,
+          status: baseProduct.status,
+          categories: baseProductCategories.map(
+            (baseProductCategory) => baseProductCategory.category.name,
+          ),
+          brand: baseProduct.brand.name,
+        };
+        return response;
+      });
+      return newBaseProduct;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new RpcException(
+          new ConflictException('Tên sản phẩm phải là duy nhất'),
+        );
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  async updateBaseProductStatus(data: Update_BP_Status_Req) {
+    try {
+      const baseProduct = await this.prisma.baseProduct.update({
+        where: {
+          id: data.id,
+        },
+        data: {
+          status: data.status,
+        },
+      });
+      return baseProduct;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkProductAvailable(data: CreateOrderDetailDto[]): Promise<boolean> {
+    const productVariantQueries = data.map((item) =>
+      this.prisma.productVariant.findUnique({
+        where: {
+          id: item.productVariantId,
+        },
+        include: {
+          baseProduct: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      }),
+    );
+
+    const productVariants = await Promise.all(productVariantQueries);
+
+    let isValid = productVariants.reduce(
+      (prev, variant) =>
+        prev && variant.baseProduct.status === BaseProductStatus.ACTIVE,
+      true,
+    );
+
+    if (!isValid) {
+      throw new RpcException(new ConflictException('Sản phẩm đã ngừng bán'));
+    }
+
+    isValid = data.reduce((prev, orderDetail, index) => {
+      return prev && productVariants[index].quantity >= orderDetail.quantity;
+    }, true);
+
+    if (!isValid) {
+      throw new RpcException(
+        new ConflictException('Số lượng sản phẩm không đủ'),
+      );
+    }
+
+    return true;
+  }
+
+  async updateProductVariantQuantity(data: Update_PV_Quantity_Req[]) {
+    // update quantity
+    const quantityUpdatePromises = data.map((detail) => {
+      let query: Object = {};
+
+      if (detail.type == 'increment') {
+        query = { increment: detail.quantity };
+      } else {
+        query = { decrement: detail.quantity };
+      }
+
+      return this.prisma.productVariant.update({
+        where: { id: detail.productVariantId },
+        data: { quantity: query },
+      });
+    });
+    const result = await Promise.all(quantityUpdatePromises);
+    return !!result;
+  }
 }

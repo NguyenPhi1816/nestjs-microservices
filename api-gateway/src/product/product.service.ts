@@ -26,6 +26,7 @@ import AddBPImage from './dto/add-bp-image.dto';
 import Add_BP_Image_Req from './dto/add-bp-image-request.dto';
 import UpdateProductVariantDto from './dto/update-product-variant.dto';
 import UpdateProductVariantRequestDto from './dto/update-product-variant-request.dto';
+import { Update_BaseProduct_Req } from './dto/update-bp.dto';
 
 @Injectable()
 export class ProductService {
@@ -112,6 +113,18 @@ export class ProductService {
           }),
         );
     }
+  }
+
+  async updateBaseProduct(data: Update_BaseProduct_Req) {
+    return this.productClient.send({ cmd: 'update-base-product' }, data).pipe(
+      catchError((error) => {
+        console.log(error);
+        return throwError(() => new RpcException(error.response));
+      }),
+      map(async (response) => {
+        return response;
+      }),
+    );
   }
 
   async createOptionValues(data: CreateOptionValuesDto) {
@@ -279,6 +292,17 @@ export class ProductService {
   async setBPMainImage(baseProductId: number, imageId: number) {
     return this.productClient
       .send({ cmd: 'set-base-product-main-image' }, { baseProductId, imageId })
+      .pipe(
+        catchError((error) => {
+          console.log(error);
+          return throwError(() => new RpcException(error.response));
+        }),
+      );
+  }
+
+  async updateBaseProductStatus(data: Update_BaseProduct_Req) {
+    return this.productClient
+      .send({ cmd: 'update-base-product-status' }, data)
       .pipe(
         catchError((error) => {
           console.log(error);
