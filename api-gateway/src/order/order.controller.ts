@@ -5,6 +5,7 @@ import {
   Inject,
   Param,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
@@ -38,5 +39,12 @@ export class OrderController {
   @Roles(UserRole.ADMIN)
   createOrder(@GetUser('id') userId: number, @Body() data: CreateOrderDto) {
     return this.orderService.createOrder(userId, data);
+  }
+
+  @Put('/:orderId/:status')
+  @UseGuards(AccessTokenGuard)
+  updateOrder(@Param() params: { orderId: string; status: string }) {
+    const orderId = Number.parseInt(params.orderId);
+    return this.orderService.updateOrder(orderId, params.status);
   }
 }

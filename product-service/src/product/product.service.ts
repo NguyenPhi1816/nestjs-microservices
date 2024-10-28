@@ -29,6 +29,7 @@ import { Update_BP_Req } from './dto/base-product-requests/update-BP.dto';
 import { Update_BP_Status_Req } from './dto/base-product-requests/update-BP-status.dto';
 import { CreateOrderDetailDto } from './dto/order-detail/create-order-detail.dto';
 import Update_PV_Quantity_Req from './dto/product-variant-requests/update-product-variant-quantity.dto';
+import { ppid } from 'process';
 
 @Injectable()
 export class ProductService {
@@ -457,5 +458,45 @@ export class ProductService {
     });
     const result = await Promise.all(quantityUpdatePromises);
     return !!result;
+  }
+
+  async getProductVariantInfor(productId: number) {
+    const result = await this.prisma.productVariant.findUnique({
+      where: {
+        id: productId,
+      },
+      select: {
+        baseProduct: {
+          select: {
+            name: true,
+          },
+        },
+        image: true,
+        optionValueVariants: {
+          select: {
+            optionValue: {
+              select: {
+                option: {
+                  select: {
+                    name: true,
+                  },
+                },
+                value: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const response = {
+      productName: result.baseProduct.name,
+      productImage: result.image,
+      optionValue: result.optionValueVariants.map(
+        (item) => item.optionValue.option.name + ': ' + item.optionValue.value,
+      ),
+    };
+
+    return response;
   }
 }

@@ -42,5 +42,34 @@ model User {
   image       String?
   email       String   @unique
 
-  account Account?
+  account      Account?
+  UserActivity UserActivity[]
+  UserSearchHistory UserSearchHistory[]
+}
+
+model UserActivity {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  categoryId   Int
+  productId    Int?
+  activityType String
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, categoryId])
+  @@index([categoryId, createdAt])
+}
+
+model UserSearchHistory {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  searchQuery String
+  categoryId  Int?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([categoryId, createdAt])
 }

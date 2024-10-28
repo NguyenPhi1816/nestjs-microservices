@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Inject, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { catchError, map, throwError } from 'rxjs';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
@@ -48,5 +56,18 @@ export class UserController {
           throwError(() => new RpcException(error.response)),
         ),
       );
+  }
+
+  @Post('seed-data')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  seedData() {
+    return this.client.send({ cmd: 'seed-data' }, {});
+  }
+
+  @Get('get-top-categories')
+  @UseGuards(AccessTokenGuard)
+  getTopRecommendation(@GetUser('id') userId: number) {
+    return this.client.send({ cmd: 'get-top-categories' }, userId);
   }
 }

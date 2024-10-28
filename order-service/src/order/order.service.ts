@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from 'src/constants/order-status.enum';
@@ -11,6 +15,7 @@ import { PaymentMethod } from './dto/payment-method.enum';
 import { OrderResponse } from './dto/order-response.dto';
 import { OrderDetailResponse } from './dto/order-detail-response.dto';
 import { PaymentResponse } from './dto/payment-response.dto';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class OrderService {
@@ -157,7 +162,11 @@ export class OrderService {
         },
       });
 
-      console.log(order);
+      if (!order) {
+        throw new RpcException(
+          new NotFoundException('Đơn hàng không tồn tại.'),
+        );
+      }
 
       const orderDetails: OrderDetailResponse[] = order.orderDetails.map(
         (orderDetail) => {
@@ -186,6 +195,186 @@ export class OrderService {
         note: order.note,
         createAt: order.createAt.toISOString(),
         status: order.status,
+        orderDetails: orderDetails,
+        payment: payment,
+      };
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateOrder(orderId: number, status: string) {
+    try {
+      const _order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (
+        _order.status !== OrderStatus.PENDING &&
+        _order.status !== OrderStatus.SHIPPING
+      ) {
+        throw new RpcException(
+          new ConflictException('Unable to update order.'),
+        );
+      }
+      const result = await this.prisma.$transaction(async (prisma) => {
+        const prismaQuery = {
+          id: true,
+          userId: true,
+          receiverName: true,
+          receiverPhoneNumber: true,
+          receiverAddress: true,
+          note: true,
+          createAt: true,
+          status: true,
+          orderDetails: {
+            select: {
+              id: true,
+              productVariantId: true,
+              quantity: true,
+              price: true,
+            },
+          },
+          payment: {
+            select: {
+              id: true,
+              paymentMethod: true,
+              paymentDate: true,
+              totalPrice: true,
+              status: true,
+              transactionId: true,
+            },
+          },
+        };
+
+        switch (status) {
+          case OrderStatus.SHIPPING: {
+            const order = await this.prisma.order.update({
+              where: {
+                id: orderId,
+              },
+              data: {
+                status: OrderStatus.SHIPPING,
+              },
+              select: prismaQuery,
+            });
+            return order;
+          }
+          case OrderStatus.SUCCESS: {
+            const order = await prisma.order.update({
+              where: { id: orderId },
+              data: { status: OrderStatus.SUCCESS },
+              select: prismaQuery,
+            });
+            if (order.payment.paymentMethod === PaymentMethod.CASH) {
+              const payment = await prisma.payment.update({
+                where: { id: order.payment.id },
+                data: {
+                  status: PaymentStatus.SUCCESS,
+                  paymentDate: new Date(),
+                  transactionId: null,
+                },
+                select: {
+                  paymentMethod: true,
+                  paymentDate: true,
+                  totalPrice: true,
+                  status: true,
+                  transactionId: true,
+                },
+              });
+              delete order.payment;
+              return { ...order, payment };
+            }
+            return order;
+          }
+          case OrderStatus.CANCEL: {
+            // update order status to CANCEL
+            const order = await prisma.order.update({
+              where: { id: orderId },
+              data: { status: OrderStatus.CANCEL },
+              select: prismaQuery,
+            });
+
+            // update quantity
+            // const updateQuantityPromises = order.orderDetails.map((detail) =>
+            //   prisma.productVariant.update({
+            //     where: { id: detail.productVariantId },
+            //     data: { quantity: { increment: detail.quantity } },
+            //   }),
+            // );
+            // await Promise.all(updateQuantityPromises);
+
+            // update payment status to CANCEL (check by cash) or REFUND (check by another method)
+            if (order.payment.paymentMethod === PaymentMethod.CASH) {
+              const payment = await prisma.payment.update({
+                where: { id: order.payment.id },
+                data: {
+                  status: PaymentStatus.CANCEL,
+                  paymentDate: null,
+                  transactionId: null,
+                },
+              });
+              delete order.payment;
+              return { ...order, payment };
+            } else {
+              const payment = await prisma.payment.update({
+                where: { id: order.payment.id },
+                data: {
+                  status: PaymentStatus.REFUND,
+                  paymentDate: new Date(),
+                  transactionId: 'refunded-transaction-id',
+                },
+                select: {
+                  paymentMethod: true,
+                  paymentDate: true,
+                  totalPrice: true,
+                  status: true,
+                  transactionId: true,
+                },
+              });
+              delete order.payment;
+              return { ...order, payment };
+            }
+          }
+          default: {
+            throw new RpcException(
+              new ConflictException(
+                'Có lỗi xảy ra trong quá trình cập nhật trạng thái đơn hàng',
+              ),
+            );
+          }
+        }
+      });
+
+      const orderDetails: OrderDetailResponse[] = result.orderDetails.map(
+        (orderDetail) => {
+          return {
+            id: orderDetail.id,
+            productVariantId: orderDetail.productVariantId,
+            quantity: orderDetail.quantity,
+            price: orderDetail.price,
+          };
+        },
+      );
+
+      const payment: PaymentResponse = {
+        ...result.payment,
+        paymentDate: result.payment.paymentDate
+          ? result.payment.paymentDate.toISOString()
+          : null,
+      };
+
+      const response: OrderResponse = {
+        id: result.id,
+        userId: result.userId,
+        receiverName: result.receiverName,
+        receiverPhoneNumber: result.receiverPhoneNumber,
+        receiverAddress: result.receiverAddress,
+        note: result.note,
+        createAt: result.createAt.toISOString(),
+        status: result.status,
         orderDetails: orderDetails,
         payment: payment,
       };

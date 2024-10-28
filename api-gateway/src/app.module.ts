@@ -7,6 +7,7 @@ import { MediaModule } from './media/media.module';
 import { CategoryModule } from './category/category.module';
 import { BrandModule } from './brand/brand.module';
 import { OrderModule } from './order/order.module';
+import { PredictModule } from './predict/predict.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { OrderModule } from './order/order.module';
     CategoryModule,
     BrandModule,
     OrderModule,
+    PredictModule,
   ],
 })
 export class AppModule {}

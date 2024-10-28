@@ -17,6 +17,11 @@ export class OrderController {
     return this.orderService.createOrder(data.userId, data.dto);
   }
 
+  @MessagePattern({ cmd: 'update-order' })
+  updateOrder(data: { orderId: number; status: string }) {
+    return this.orderService.updateOrder(data.orderId, data.status);
+  }
+
   @MessagePattern({ cmd: 'get-order-detail-by-id' })
   getOrderDetailById(orderId: string) {
     const orderIdInt = Number.parseInt(orderId);

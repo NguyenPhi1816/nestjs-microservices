@@ -79,4 +79,9 @@ export class ProductController {
   updateProductVariantQuantity(data: Update_PV_Quantity_Req[]) {
     return this.productService.updateProductVariantQuantity(data);
   }
+
+  @MessagePattern({ cmd: 'get-product-variant-infor' })
+  getProductVariantInfor(productId: number) {
+    return this.productService.getProductVariantInfor(productId);
+  }
 }
