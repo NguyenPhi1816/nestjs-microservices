@@ -6,10 +6,15 @@ import { normalizeName } from 'src/utils/normalize-name.util';
 import { RpcException } from '@nestjs/microservices';
 import UpdateCategoryDto from './dto/update-category.dto';
 import { CategoryProductsDto } from './dto/category-products.dto';
+import { ClientAllCategoryResponse } from './dto/client-all-category-response.dto';
+import { ProductService } from 'src/product/product.service';
 
 @Injectable()
 export class CategoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private productService: ProductService,
+  ) {}
 
   async getAllCategories(): Promise<CategoryResponseDto[]> {
     const categories = await this.prisma.category.findMany({
@@ -50,6 +55,47 @@ export class CategoryService {
     });
     return response;
   }
+
+  // async getClientAllCategories(): Promise<ClientAllCategoryResponse[]> {
+  //   const categories = await this.prisma.category.findMany({
+  //     where: {
+  //       parent: null,
+  //     },
+  //     select: {
+  //       id: true,
+  //       slug: true,
+  //       name: true,
+  //       image: true,
+  //       children: {
+  //         select: {
+  //           id: true,
+  //           slug: true,
+  //           name: true,
+  //           image: true,
+  //         },
+  //       },
+  //     },
+  //   });
+  //   const productPromises = categories.map((category) => {
+  //     return this.productService.getProductsByCategorySlug(category.slug);
+  //   });
+
+  //   const productResults = await Promise.all(productPromises);
+
+  //   const response: ClientAllCategoryResponse[] = categories.map(
+  //     (category, index) => {
+  //       return {
+  //         id: category.id,
+  //         slug: category.slug,
+  //         name: category.name,
+  //         image: category.image,
+  //         children: category.children,
+  //         products: productResults[index],
+  //       };
+  //     },
+  //   );
+  //   return response;
+  // }
 
   async createCategory(dto: CreateCategoryDto): Promise<CategoryResponseDto> {
     try {

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -172,7 +173,7 @@ export class OrderService {
         (orderDetail) => {
           return {
             id: orderDetail.id,
-            productVariantId: orderDetail.id,
+            productVariantId: orderDetail.productVariantId,
             quantity: orderDetail.quantity,
             price: orderDetail.price,
           };
@@ -251,7 +252,7 @@ export class OrderService {
 
         switch (status) {
           case OrderStatus.SHIPPING: {
-            const order = await this.prisma.order.update({
+            const order = await prisma.order.update({
               where: {
                 id: orderId,
               },
@@ -296,15 +297,6 @@ export class OrderService {
               data: { status: OrderStatus.CANCEL },
               select: prismaQuery,
             });
-
-            // update quantity
-            // const updateQuantityPromises = order.orderDetails.map((detail) =>
-            //   prisma.productVariant.update({
-            //     where: { id: detail.productVariantId },
-            //     data: { quantity: { increment: detail.quantity } },
-            //   }),
-            // );
-            // await Promise.all(updateQuantityPromises);
 
             // update payment status to CANCEL (check by cash) or REFUND (check by another method)
             if (order.payment.paymentMethod === PaymentMethod.CASH) {
@@ -382,5 +374,32 @@ export class OrderService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async isOrderReadyForReview(orderId: number) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        status: true,
+        orderDetails: {
+          select: {
+            id: true,
+            productVariantId: true,
+          },
+        },
+      },
+    });
+
+    if (order.status !== OrderStatus.SUCCESS) {
+      throw new RpcException(
+        new BadRequestException('Unable to create feedback.'),
+      );
+    }
+
+    const response = order.orderDetails.map((item) => ({
+      id: item.id,
+      productVariantId: item.productVariantId,
+    }));
+    return response;
   }
 }

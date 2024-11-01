@@ -84,4 +84,9 @@ export class ProductController {
   getProductVariantInfor(productId: number) {
     return this.productService.getProductVariantInfor(productId);
   }
+
+  @MessagePattern({ cmd: 'get-product-variant-by-base-product-slug' })
+  getPVByBPSlug(slug: string) {
+    return this.productService.getProductVariantByBPSlug(slug);
+  }
 }

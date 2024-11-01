@@ -27,4 +27,10 @@ export class OrderController {
     const orderIdInt = Number.parseInt(orderId);
     return this.orderService.getOrderDetailById(orderIdInt);
   }
+
+  @MessagePattern({ cmd: 'is-order-ready-for-review' })
+  isOrderReadyForReview(orderId: string) {
+    const orderIdInt = Number.parseInt(orderId);
+    return this.orderService.isOrderReadyForReview(orderIdInt);
+  }
 }

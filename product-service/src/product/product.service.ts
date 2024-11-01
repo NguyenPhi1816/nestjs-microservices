@@ -29,7 +29,7 @@ import { Update_BP_Req } from './dto/base-product-requests/update-BP.dto';
 import { Update_BP_Status_Req } from './dto/base-product-requests/update-BP-status.dto';
 import { CreateOrderDetailDto } from './dto/order-detail/create-order-detail.dto';
 import Update_PV_Quantity_Req from './dto/product-variant-requests/update-product-variant-quantity.dto';
-import { ppid } from 'process';
+import { ProductVariantResponseDto } from './dto/product-variant-responses/PV-client.dto';
 
 @Injectable()
 export class ProductService {
@@ -499,4 +499,202 @@ export class ProductService {
 
     return response;
   }
+
+  async getProductVariantByBPSlug(slug: string) {
+    const baseProduct = await this.prisma.baseProduct.findUnique({
+      where: {
+        slug: slug,
+      },
+      select: {
+        productVariants: {
+          select: {
+            id: true,
+            optionValueVariants: {
+              select: {
+                optionValue: {
+                  select: {
+                    value: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const response = baseProduct.productVariants.map((item) => ({
+      id: item.id,
+      variant: item.optionValueVariants
+        .map((ovv) => ovv.optionValue.value)
+        .join(', '),
+    }));
+
+    return response;
+  }
+
+  // async getSummary(baseProductSlug: string) {
+  //   try {
+  //     // Define the common where clause to be used in all queries
+  //     const whereClause = {
+  //       orderDetail: {
+  //         productVariant: {
+  //           baseProduct: {
+  //             slug: baseProductSlug,
+  //           },
+  //         },
+  //       },
+  //     };
+
+  //     // Define queries
+  //     const numberOfReviewsQuery = this.prisma.review.count({
+  //       where: whereClause,
+  //     });
+
+  //     const averageRatingQuery = this.prisma.review.aggregate({
+  //       where: whereClause,
+  //       _avg: {
+  //         rating: true,
+  //       },
+  //     });
+
+  //     const numberOfPurchasesQuery = this.prisma.orderDetail.aggregate({
+  //       where: {
+  //         productVariant: {
+  //           baseProduct: {
+  //             slug: baseProductSlug,
+  //           },
+  //         },
+  //         order: {
+  //           status: OrderStatus.SUCCESS,
+  //         },
+  //       },
+  //       _sum: {
+  //         quantity: true,
+  //       },
+  //     });
+
+  //     // Execute queries in parallel
+  //     const [numberOfReviews, averageRatingResult, numberOfPurchasesResult] =
+  //       await Promise.all([
+  //         numberOfReviewsQuery,
+  //         averageRatingQuery,
+  //         numberOfPurchasesQuery,
+  //       ]);
+
+  //     // Extract results
+  //     const averageRating = averageRatingResult._avg.rating ?? 0;
+  //     const numberOfPurchases = numberOfPurchasesResult._sum.quantity ?? 0;
+
+  //     return [numberOfReviews, averageRating, numberOfPurchases];
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
+
+  // async getBaseProducts(
+  //   whereClause: any,
+  //   limit: number,
+  //   page: number,
+  //   sortBy: string,
+  // ): Promise<ProductVariantResponseDto[]> {
+  //   const baseProducts = await this.prisma.baseProduct.findMany({
+  //     where: {
+  //       status: BaseProductStatus.ACTIVE,
+  //       ...whereClause,
+  //     },
+  //     take: limit,
+  //     skip: (page - 1) * limit,
+  //     select: {
+  //       id: true,
+  //       slug: true,
+  //       name: true,
+  //       productVariants: {
+  //         take: 1,
+  //         select: {
+  //           id: true,
+  //           image: true,
+  //           price: true,
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   const baseProductSummaryQueries = baseProducts.map((baseProduct) =>
+  //     this.getSummary(baseProduct.slug),
+  //   );
+  //   const baseProductSummaries = await Promise.all(baseProductSummaryQueries);
+
+  //   const response: ProductVariantResponseDto[] = baseProducts
+  //     .map((baseProduct, index) => {
+  //       const [numberOfReviews, averageRating, numberOfPurchases] =
+  //         baseProductSummaries[index];
+  //       const productVariant = baseProduct.productVariants[0];
+
+  //       if (productVariant) {
+  //         return {
+  //           id: baseProduct.id,
+  //           image: productVariant.image,
+  //           name: baseProduct.name,
+  //           price: productVariant.price,
+  //           slug: baseProduct.slug,
+  //           variantId: productVariant.id,
+  //           averageRating: averageRating,
+  //           numberOfReviews: numberOfReviews,
+  //           numberOfPurchases: numberOfPurchases,
+  //         };
+  //       }
+  //     })
+  //     .filter(Boolean) as ProductVariantResponseDto[];
+
+  //   // Sort the response based on sortBy criteria
+  //   switch (sortBy) {
+  //     case OrderBySearchParams.PRICE_ASC:
+  //       response.sort((a, b) => a.price - b.price);
+  //       break;
+  //     case OrderBySearchParams.PRICE_DESC:
+  //       response.sort((a, b) => b.price - a.price);
+  //       break;
+  //     case OrderBySearchParams.BEST_SELLING:
+  //       response.sort((a, b) => b.numberOfPurchases - a.numberOfPurchases);
+  //       break;
+  //     default:
+  //       response.sort((a, b) => b.numberOfPurchases - a.numberOfPurchases);
+  //       break;
+  //   }
+
+  //   return response;
+  // }
+
+  // async getProductsByCategorySlug(
+  //   slug: string,
+  //   fromPrice?: number,
+  //   toPrice?: number,
+  //   sortBy: string = 'bestSelling',
+  //   page: number = 1,
+  //   limit: number = 20,
+  // ): Promise<ProductVariantResponseDto[]> {
+  //   const whereClause = {
+  //     baseProductCategories: {
+  //       some: {
+  //         category: {
+  //           slug: slug,
+  //         },
+  //       },
+  //     },
+  //   };
+
+  //   if (!Number.isNaN(fromPrice) && !Number.isNaN(toPrice)) {
+  //     whereClause['productVariants'] = {
+  //       some: {
+  //         price: {
+  //           gte: fromPrice,
+  //           lte: toPrice,
+  //         },
+  //       },
+  //     };
+  //   }
+
+  //   return this.getBaseProducts(whereClause, limit, page, sortBy);
+  // }
 }

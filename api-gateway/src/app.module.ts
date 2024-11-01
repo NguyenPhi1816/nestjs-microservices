@@ -8,6 +8,7 @@ import { CategoryModule } from './category/category.module';
 import { BrandModule } from './brand/brand.module';
 import { OrderModule } from './order/order.module';
 import { PredictModule } from './predict/predict.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { PredictModule } from './predict/predict.module';
     BrandModule,
     OrderModule,
     PredictModule,
+    ReviewModule,
   ],
 })
 export class AppModule {}
