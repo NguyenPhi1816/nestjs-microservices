@@ -27,11 +27,14 @@ import Add_BP_Image_Req from './dto/add-bp-image-request.dto';
 import UpdateProductVariantDto from './dto/update-product-variant.dto';
 import UpdateProductVariantRequestDto from './dto/update-product-variant-request.dto';
 import { Update_BaseProduct_Req } from './dto/update-bp.dto';
+import { BaseProductResponseDto } from './dto/BP.dto';
 
 @Injectable()
 export class ProductService {
   private productClient: ClientProxy;
   private mediaClient: ClientProxy;
+  private reviewClient: ClientProxy;
+  private orderClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -46,6 +49,20 @@ export class ProductService {
       options: {
         host: configService.get('MEDIA_SERVICE_HOST'),
         port: configService.get('MEDIA_SERVICE_PORT'),
+      },
+    });
+    this.reviewClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('REVIEW_SERVICE_HOST'),
+        port: configService.get('REVIEW_SERVICE_PORT'),
+      },
+    });
+    this.orderClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('ORDER_SERVICE_HOST'),
+        port: configService.get('ORDER_SERVICE_PORT'),
       },
     });
   }
@@ -66,6 +83,62 @@ export class ProductService {
           return response;
         }),
       );
+  }
+
+  async getBPBySlug(slug: string) {
+    const baseProduct = await firstValueFrom(
+      this.productClient
+        .send({ cmd: 'get-base-product-by-slug-client' }, slug)
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response as BaseProductResponseDto;
+          }),
+        ),
+    );
+
+    const productVariantIds = baseProduct.productVariants.map(
+      (item) => item.id,
+    );
+
+    const reviewSummary = await firstValueFrom(
+      this.reviewClient
+        .send({ cmd: 'get-review-summary' }, productVariantIds)
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.message)),
+          ),
+          map((response) => {
+            return response as {
+              numberOfReviews: number;
+              averageRating: number;
+            };
+          }),
+        ),
+    );
+
+    const orderSummary = await firstValueFrom(
+      this.orderClient
+        .send({ cmd: 'get-order-summary' }, productVariantIds)
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.message)),
+          ),
+          map((response) => {
+            return response as {
+              numberOfPurchases: number;
+            };
+          }),
+        ),
+    );
+
+    baseProduct.averageRating = reviewSummary.averageRating;
+    baseProduct.numberOfReviews = reviewSummary.numberOfReviews;
+    baseProduct.numberOfPurchases = orderSummary.numberOfPurchases;
+
+    return baseProduct;
   }
 
   async createBaseProduct(data: CreateBaseProductDto) {

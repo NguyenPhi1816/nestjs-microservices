@@ -39,6 +39,11 @@ export class ProductController {
     return this.productService.getBySlug(param.slug);
   }
 
+  @Get('client/products/:slug')
+  getBPBySlug(@Param() param: { slug: string }) {
+    return this.productService.getBPBySlug(param.slug);
+  }
+
   @Post('products')
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

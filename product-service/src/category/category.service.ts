@@ -56,46 +56,46 @@ export class CategoryService {
     return response;
   }
 
-  // async getClientAllCategories(): Promise<ClientAllCategoryResponse[]> {
-  //   const categories = await this.prisma.category.findMany({
-  //     where: {
-  //       parent: null,
-  //     },
-  //     select: {
-  //       id: true,
-  //       slug: true,
-  //       name: true,
-  //       image: true,
-  //       children: {
-  //         select: {
-  //           id: true,
-  //           slug: true,
-  //           name: true,
-  //           image: true,
-  //         },
-  //       },
-  //     },
-  //   });
-  //   const productPromises = categories.map((category) => {
-  //     return this.productService.getProductsByCategorySlug(category.slug);
-  //   });
+  async getClientAllCategories(): Promise<ClientAllCategoryResponse[]> {
+    const categories = await this.prisma.category.findMany({
+      where: {
+        parent: null,
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        image: true,
+        children: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            image: true,
+          },
+        },
+      },
+    });
+    const productPromises = categories.map((category) => {
+      return this.productService.getProductsByCategorySlug(category.slug);
+    });
 
-  //   const productResults = await Promise.all(productPromises);
+    const productResults = await Promise.all(productPromises);
 
-  //   const response: ClientAllCategoryResponse[] = categories.map(
-  //     (category, index) => {
-  //       return {
-  //         id: category.id,
-  //         slug: category.slug,
-  //         name: category.name,
-  //         image: category.image,
-  //         children: category.children,
-  //         products: productResults[index],
-  //       };
-  //     },
-  //   );
-  //   return response;
-  // }
+    const response: ClientAllCategoryResponse[] = categories.map(
+      (category, index) => {
+        return {
+          id: category.id,
+          slug: category.slug,
+          name: category.name,
+          image: category.image,
+          children: category.children,
+          products: productResults[index],
+        };
+      },
+    );
+    return response;
+  }
 
   async createCategory(dto: CreateCategoryDto): Promise<CategoryResponseDto> {
     try {

@@ -18,11 +18,14 @@ import CreateCategoryRequestDto from './dto/create-category-request.dto';
 import UpdateCategoryDto from './dto/update-category.dto';
 import UpdateCategoryRequestDto from './dto/update-category-request.dto';
 import UploadResponse from './dto/upload-response.dto';
+import { ClientAllCategoryResponse } from './dto/client-all-category-response.dto';
 
 @Injectable()
 export class CategoryService {
   private productClient: ClientProxy;
   private mediaClient: ClientProxy;
+  private reviewClient: ClientProxy;
+  private orderClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -37,6 +40,22 @@ export class CategoryService {
       options: {
         host: configService.get('MEDIA_SERVICE_HOST'),
         port: configService.get('MEDIA_SERVICE_PORT'),
+      },
+    });
+
+    this.reviewClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('REVIEW_SERVICE_HOST'),
+        port: configService.get('REVIEW_SERVICE_PORT'),
+      },
+    });
+
+    this.orderClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('ORDER_SERVICE_HOST'),
+        port: configService.get('ORDER_SERVICE_PORT'),
       },
     });
   }
@@ -133,5 +152,59 @@ export class CategoryService {
 
   getCategoryProducts(slug: string) {
     return this.productClient.send({ cmd: 'get-category-products' }, slug);
+  }
+
+  async getClientAllCategories() {
+    const categories: ClientAllCategoryResponse[] = await firstValueFrom(
+      this.productClient.send({ cmd: 'get-all-client-categories' }, {}).pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response)),
+        ),
+        map((response) => response as ClientAllCategoryResponse[]),
+      ),
+    );
+
+    await Promise.all(
+      categories.flatMap((category) =>
+        category.products.map(async (product) => {
+          const reviewSummary = await firstValueFrom(
+            this.reviewClient
+              .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+              .pipe(
+                catchError((error) =>
+                  throwError(() => new RpcException(error.message)),
+                ),
+                map((response) => {
+                  return response as {
+                    numberOfReviews: number;
+                    averageRating: number;
+                  };
+                }),
+              ),
+          );
+
+          const orderSummary = await firstValueFrom(
+            this.orderClient
+              .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+              .pipe(
+                catchError((error) =>
+                  throwError(() => new RpcException(error.message)),
+                ),
+                map((response) => {
+                  return response as {
+                    numberOfPurchases: number;
+                  };
+                }),
+              ),
+          );
+
+          product.averageRating = reviewSummary.averageRating;
+          product.numberOfReviews = reviewSummary.numberOfReviews;
+          product.numberOfPurchases = orderSummary.numberOfPurchases;
+        }),
+      ),
+    );
+
+    return categories;
   }
 }

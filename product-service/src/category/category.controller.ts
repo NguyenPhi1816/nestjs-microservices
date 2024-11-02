@@ -32,4 +32,9 @@ export class CategoryController {
   getCategoryProducts(slug: string) {
     return this.categoryService.getCategoryProducts(slug);
   }
+
+  @MessagePattern({ cmd: 'get-all-client-categories' })
+  getClientAllCategories() {
+    return this.categoryService.getClientAllCategories();
+  }
 }

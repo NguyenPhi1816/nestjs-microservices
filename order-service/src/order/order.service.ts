@@ -402,4 +402,24 @@ export class OrderService {
     }));
     return response;
   }
+
+  async getOrderSummary(productVariantIds: number[]) {
+    const numberOfPurchasesResult = await this.prisma.orderDetail.aggregate({
+      where: {
+        productVariantId: {
+          in: productVariantIds,
+        },
+        order: {
+          status: OrderStatus.SUCCESS,
+        },
+      },
+      _sum: {
+        quantity: true,
+      },
+    });
+
+    return {
+      numberOfPurchases: numberOfPurchasesResult._sum.quantity ?? 0,
+    };
+  }
 }

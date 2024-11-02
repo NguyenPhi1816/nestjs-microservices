@@ -62,4 +62,9 @@ export class CategoryController {
   getCategoryProduct(@Param() param: { slug: string }) {
     return this.categoryService.getCategoryProducts(param.slug);
   }
+
+  @Get('/client')
+  getClientAllCategories() {
+    return this.categoryService.getClientAllCategories();
+  }
 }

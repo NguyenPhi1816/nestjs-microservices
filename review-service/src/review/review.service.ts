@@ -94,8 +94,8 @@ export class ReviewService {
         updateAt: true,
         productVariantId: true,
       },
-      skip: (data.page - 1) * data.limit,
-      take: data.limit,
+      skip: (data.page - 1) * Number.parseInt(data.limit),
+      take: Number.parseInt(data.limit),
     });
 
     const myReviews: ReviewDto[] = reviews.map((item) => {
@@ -123,6 +123,7 @@ export class ReviewService {
   }
 
   async getReviewSummary(productVariantIds: number[]) {
+    console.log(productVariantIds);
     const whereClause = {
       productVariantId: {
         in: productVariantIds,
@@ -147,7 +148,7 @@ export class ReviewService {
 
     return {
       numberOfReviews,
-      averageRatingResult,
+      averageRating: averageRatingResult._avg.rating ?? 0,
     };
   }
 }

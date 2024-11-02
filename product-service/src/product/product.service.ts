@@ -30,6 +30,9 @@ import { Update_BP_Status_Req } from './dto/base-product-requests/update-BP-stat
 import { CreateOrderDetailDto } from './dto/order-detail/create-order-detail.dto';
 import Update_PV_Quantity_Req from './dto/product-variant-requests/update-product-variant-quantity.dto';
 import { ProductVariantResponseDto } from './dto/product-variant-responses/PV-client.dto';
+import { OrderBySearchParams } from 'src/constants/orderBySearchParams';
+import OVs_Res from './dto/option-value-responses/OVs.dto';
+import { BaseProductResponseDto } from './dto/base-product-responses/BP.dto';
 
 @Injectable()
 export class ProductService {
@@ -533,168 +536,276 @@ export class ProductService {
     return response;
   }
 
-  // async getSummary(baseProductSlug: string) {
-  //   try {
-  //     // Define the common where clause to be used in all queries
-  //     const whereClause = {
-  //       orderDetail: {
-  //         productVariant: {
-  //           baseProduct: {
-  //             slug: baseProductSlug,
-  //           },
-  //         },
-  //       },
-  //     };
+  async getBaseProducts(
+    whereClause: any,
+    limit: number,
+    page: number,
+    sortBy: string,
+  ): Promise<ProductVariantResponseDto[]> {
+    const baseProducts = await this.prisma.baseProduct.findMany({
+      where: {
+        status: BaseProductStatus.ACTIVE,
+        ...whereClause,
+      },
+      take: limit,
+      skip: (page - 1) * limit,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        productVariants: {
+          select: {
+            id: true,
+            image: true,
+            prices: {
+              take: 1,
+              orderBy: {
+                createdAt: 'desc',
+              },
+              select: {
+                price: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-  //     // Define queries
-  //     const numberOfReviewsQuery = this.prisma.review.count({
-  //       where: whereClause,
-  //     });
+    const response: ProductVariantResponseDto[] = baseProducts
+      .map((baseProduct, index) => {
+        const productVariant = baseProduct.productVariants[0];
 
-  //     const averageRatingQuery = this.prisma.review.aggregate({
-  //       where: whereClause,
-  //       _avg: {
-  //         rating: true,
-  //       },
-  //     });
+        if (productVariant) {
+          return {
+            id: baseProduct.id,
+            image: productVariant.image,
+            name: baseProduct.name,
+            price: productVariant.prices[0].price,
+            slug: baseProduct.slug,
+            variantId: productVariant.id,
+            productVariantIds: baseProduct.productVariants.map(
+              (item) => item.id,
+            ),
+            averageRating: 0,
+            numberOfReviews: 0,
+            numberOfPurchases: 0,
+          };
+        }
+      })
+      .filter(Boolean) as ProductVariantResponseDto[];
 
-  //     const numberOfPurchasesQuery = this.prisma.orderDetail.aggregate({
-  //       where: {
-  //         productVariant: {
-  //           baseProduct: {
-  //             slug: baseProductSlug,
-  //           },
-  //         },
-  //         order: {
-  //           status: OrderStatus.SUCCESS,
-  //         },
-  //       },
-  //       _sum: {
-  //         quantity: true,
-  //       },
-  //     });
+    // Sort the response based on sortBy criteria
+    switch (sortBy) {
+      case OrderBySearchParams.PRICE_ASC:
+        response.sort((a, b) => a.price - b.price);
+        break;
+      case OrderBySearchParams.PRICE_DESC:
+        response.sort((a, b) => b.price - a.price);
+        break;
+      case OrderBySearchParams.BEST_SELLING:
+        response.sort((a, b) => b.numberOfPurchases - a.numberOfPurchases);
+        break;
+      default:
+        response.sort((a, b) => b.numberOfPurchases - a.numberOfPurchases);
+        break;
+    }
 
-  //     // Execute queries in parallel
-  //     const [numberOfReviews, averageRatingResult, numberOfPurchasesResult] =
-  //       await Promise.all([
-  //         numberOfReviewsQuery,
-  //         averageRatingQuery,
-  //         numberOfPurchasesQuery,
-  //       ]);
+    return response;
+  }
 
-  //     // Extract results
-  //     const averageRating = averageRatingResult._avg.rating ?? 0;
-  //     const numberOfPurchases = numberOfPurchasesResult._sum.quantity ?? 0;
+  async getProductsByCategorySlug(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<ProductVariantResponseDto[]> {
+    const whereClause: any = {
+      baseProductCategories: {
+        some: {
+          category: {
+            slug: slug,
+          },
+        },
+      },
+    };
 
-  //     return [numberOfReviews, averageRating, numberOfPurchases];
-  //   } catch (error) {
-  //     throw error;
-  //   }
-  // }
+    if (!Number.isNaN(fromPrice) && !Number.isNaN(toPrice)) {
+      whereClause.productVariants = {
+        some: {
+          prices: {
+            some: {
+              price: {
+                gte: fromPrice,
+                lte: toPrice,
+              },
+            },
+          },
+        },
+      };
+    }
 
-  // async getBaseProducts(
-  //   whereClause: any,
-  //   limit: number,
-  //   page: number,
-  //   sortBy: string,
-  // ): Promise<ProductVariantResponseDto[]> {
-  //   const baseProducts = await this.prisma.baseProduct.findMany({
-  //     where: {
-  //       status: BaseProductStatus.ACTIVE,
-  //       ...whereClause,
-  //     },
-  //     take: limit,
-  //     skip: (page - 1) * limit,
-  //     select: {
-  //       id: true,
-  //       slug: true,
-  //       name: true,
-  //       productVariants: {
-  //         take: 1,
-  //         select: {
-  //           id: true,
-  //           image: true,
-  //           price: true,
-  //         },
-  //       },
-  //     },
-  //   });
+    return this.getBaseProducts(whereClause, limit, page, sortBy);
+  }
 
-  //   const baseProductSummaryQueries = baseProducts.map((baseProduct) =>
-  //     this.getSummary(baseProduct.slug),
-  //   );
-  //   const baseProductSummaries = await Promise.all(baseProductSummaryQueries);
+  async getBySlug(slug: string) {
+    try {
+      // query by slug
+      const product = await this.prisma.baseProduct.findUnique({
+        where: { slug: slug },
+        include: {
+          baseProductCategories: {
+            select: {
+              category: {
+                select: {
+                  id: true,
+                  slug: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          brand: true,
+          images: {
+            select: {
+              id: true,
+              path: true,
+              isDefault: true,
+            },
+          },
+          productVariants: {
+            select: {
+              id: true,
+              image: true,
+              imageId: true,
+              quantity: true,
+              optionValueVariants: {
+                select: {
+                  optionValue: {
+                    select: {
+                      option: {
+                        select: {
+                          name: true,
+                        },
+                      },
+                      value: true,
+                    },
+                  },
+                  optionValueId: true,
+                },
+              },
+              prices: {
+                take: 1,
+                orderBy: {
+                  createdAt: 'desc',
+                },
+                select: {
+                  price: true,
+                },
+              },
+            },
+          },
+        },
+      });
 
-  //   const response: ProductVariantResponseDto[] = baseProducts
-  //     .map((baseProduct, index) => {
-  //       const [numberOfReviews, averageRating, numberOfPurchases] =
-  //         baseProductSummaries[index];
-  //       const productVariant = baseProduct.productVariants[0];
+      if (!product) {
+        throw new RpcException(
+          new NotFoundException('Không tìm thấy sản phẩm'),
+        );
+      }
 
-  //       if (productVariant) {
-  //         return {
-  //           id: baseProduct.id,
-  //           image: productVariant.image,
-  //           name: baseProduct.name,
-  //           price: productVariant.price,
-  //           slug: baseProduct.slug,
-  //           variantId: productVariant.id,
-  //           averageRating: averageRating,
-  //           numberOfReviews: numberOfReviews,
-  //           numberOfPurchases: numberOfPurchases,
-  //         };
-  //       }
-  //     })
-  //     .filter(Boolean) as ProductVariantResponseDto[];
+      // get relate products by getting products from base product category, limit is 5 items
+      const productsByCategorySlug = await this.getProductsByCategorySlug(
+        product.baseProductCategories[0].category.slug,
+        6,
+      );
 
-  //   // Sort the response based on sortBy criteria
-  //   switch (sortBy) {
-  //     case OrderBySearchParams.PRICE_ASC:
-  //       response.sort((a, b) => a.price - b.price);
-  //       break;
-  //     case OrderBySearchParams.PRICE_DESC:
-  //       response.sort((a, b) => b.price - a.price);
-  //       break;
-  //     case OrderBySearchParams.BEST_SELLING:
-  //       response.sort((a, b) => b.numberOfPurchases - a.numberOfPurchases);
-  //       break;
-  //     default:
-  //       response.sort((a, b) => b.numberOfPurchases - a.numberOfPurchases);
-  //       break;
-  //   }
+      // remove this product from related product
+      let relatedProducts = [...productsByCategorySlug];
+      const isProductContained = productsByCategorySlug
+        .map((p) => p.id)
+        .includes(product.id);
+      if (isProductContained) {
+        relatedProducts = relatedProducts.filter(
+          (item) => item.id !== product.id,
+        );
+      } else {
+        relatedProducts = relatedProducts.slice(0, 5);
+      }
 
-  //   return response;
-  // }
+      // get product variants from base product
+      const productVariants: PV_Res[] = product.productVariants.map(
+        (variant) => {
+          const optionValue: OV_Res[] = [];
 
-  // async getProductsByCategorySlug(
-  //   slug: string,
-  //   fromPrice?: number,
-  //   toPrice?: number,
-  //   sortBy: string = 'bestSelling',
-  //   page: number = 1,
-  //   limit: number = 20,
-  // ): Promise<ProductVariantResponseDto[]> {
-  //   const whereClause = {
-  //     baseProductCategories: {
-  //       some: {
-  //         category: {
-  //           slug: slug,
-  //         },
-  //       },
-  //     },
-  //   };
+          variant.optionValueVariants.map((item) =>
+            optionValue.push({
+              option: item.optionValue.option.name,
+              value: item.optionValue.value,
+            }),
+          );
 
-  //   if (!Number.isNaN(fromPrice) && !Number.isNaN(toPrice)) {
-  //     whereClause['productVariants'] = {
-  //       some: {
-  //         price: {
-  //           gte: fromPrice,
-  //           lte: toPrice,
-  //         },
-  //       },
-  //     };
-  //   }
+          return {
+            id: variant.id,
+            image: variant.image,
+            imageId: variant.imageId,
+            quantity: variant.quantity,
+            optionValue: optionValue,
+            price: variant.prices[0].price,
+          };
+        },
+      );
 
-  //   return this.getBaseProducts(whereClause, limit, page, sortBy);
-  // }
+      // get option values
+      const optionValues: OVs_Res[] = [];
+
+      product.productVariants.map((variant) =>
+        variant.optionValueVariants.map((item) => {
+          const existedOptionIndex = optionValues.findIndex(
+            (optionValue) =>
+              optionValue.option === item.optionValue.option.name,
+          );
+          if (existedOptionIndex === -1) {
+            optionValues.push({
+              option: item.optionValue.option.name,
+              values: [item.optionValue.value],
+            });
+          } else {
+            const existedValueIndex = optionValues[
+              existedOptionIndex
+            ].values.findIndex((value) => value === item.optionValue.value);
+            if (existedValueIndex === -1) {
+              optionValues[existedOptionIndex].values.push(
+                item.optionValue.value,
+              );
+            }
+          }
+        }),
+      );
+
+      // response
+      const response: BaseProductResponseDto = {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        description: product.description,
+        categories: product.baseProductCategories.map(
+          (baseProductCategory) => baseProductCategory.category,
+        ),
+        brand: product.brand,
+        status: product.status,
+        averageRating: 0,
+        numberOfPurchases: 0,
+        numberOfReviews: 0,
+        images: product.images,
+        optionValues: optionValues,
+        relatedProducts: relatedProducts,
+        productVariants: productVariants,
+      };
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
 }

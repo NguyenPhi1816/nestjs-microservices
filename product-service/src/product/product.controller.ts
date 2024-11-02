@@ -89,4 +89,9 @@ export class ProductController {
   getPVByBPSlug(slug: string) {
     return this.productService.getProductVariantByBPSlug(slug);
   }
+
+  @MessagePattern({ cmd: 'get-base-product-by-slug-client' })
+  getBPBySlug(slug: string) {
+    return this.productService.getBySlug(slug);
+  }
 }

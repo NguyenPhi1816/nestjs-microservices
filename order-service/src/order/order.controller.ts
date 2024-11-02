@@ -33,4 +33,9 @@ export class OrderController {
     const orderIdInt = Number.parseInt(orderId);
     return this.orderService.isOrderReadyForReview(orderIdInt);
   }
+
+  @MessagePattern({ cmd: 'get-order-summary' })
+  async getOrderSummary(productVariantIds: number[]) {
+    return this.orderService.getOrderSummary(productVariantIds);
+  }
 }

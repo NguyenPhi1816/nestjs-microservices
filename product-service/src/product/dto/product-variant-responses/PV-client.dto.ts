@@ -3,6 +3,7 @@ export class ProductVariantResponseDto {
   slug: string;
   name: string;
   variantId: number;
+  productVariantIds: number[];
   image: string;
   price: number;
   averageRating: number;

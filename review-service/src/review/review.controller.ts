@@ -29,4 +29,9 @@ export class ReviewController {
   getReviewsByProductSlug(data: any) {
     return this.reviewService.getReviewsByProductSlug(data);
   }
+
+  @MessagePattern({ cmd: 'get-review-summary' })
+  async getReviewSummary(productVariantIds: number[]) {
+    return this.reviewService.getReviewSummary(productVariantIds);
+  }
 }
