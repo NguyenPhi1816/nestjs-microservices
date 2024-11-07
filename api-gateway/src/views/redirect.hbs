@@ -1,0 +1,12 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>App</title>
+  </head>
+  <body>
+    <script>
+      const status = "{{status}}"; const code = "{{code}}";
+      window.location.replace(`http://localhost:3001/checkout/payment-status?orderId=9&status=${status}&code=${code}`);
+    </script>
+  </body>
+</html>

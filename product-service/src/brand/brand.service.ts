@@ -5,10 +5,14 @@ import { CreateBrandDto } from './dto/create-brand.dto';
 import { normalizeName } from 'src/utils/normalize-name.util';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { BrandProductDto } from './dto/brand-product.dto';
+import { ProductService } from 'src/product/product.service';
 
 @Injectable()
 export class BrandService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private productService: ProductService,
+  ) {}
 
   async getAllBrands() {
     const brands = await this.prisma.brand.findMany({
@@ -146,5 +150,27 @@ export class BrandService {
       };
     });
     return response;
+  }
+
+  async getBrandBySlug(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const brand = await this.prisma.brand.findUnique({
+      where: { slug: slug },
+    });
+    const products = await this.productService.getProductsByBrandSlug(
+      slug,
+      fromPrice,
+      toPrice,
+      sortBy,
+      page,
+      limit,
+    );
+    return { ...brand, products };
   }
 }

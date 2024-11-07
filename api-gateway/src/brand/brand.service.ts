@@ -23,6 +23,8 @@ import UploadResponse from './dto/upload-response.dto';
 export class BrandService {
   private productClient: ClientProxy;
   private mediaClient: ClientProxy;
+  private reviewClient: ClientProxy;
+  private orderClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -37,6 +39,22 @@ export class BrandService {
       options: {
         host: configService.get('MEDIA_SERVICE_HOST'),
         port: configService.get('MEDIA_SERVICE_PORT'),
+      },
+    });
+
+    this.reviewClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('REVIEW_SERVICE_HOST'),
+        port: configService.get('REVIEW_SERVICE_PORT'),
+      },
+    });
+
+    this.orderClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('ORDER_SERVICE_HOST'),
+        port: configService.get('ORDER_SERVICE_PORT'),
       },
     });
   }
@@ -121,5 +139,71 @@ export class BrandService {
 
   async getBrandProducts(slug: string) {
     return this.productClient.send({ cmd: 'get-brand-products' }, slug);
+  }
+
+  async getBrandBySlug(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const brand = await firstValueFrom(
+      this.productClient
+        .send(
+          { cmd: 'get-brand-by-slug' },
+          { slug, fromPrice, toPrice, sortBy, page, limit },
+        )
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+          map((response) => {
+            return response;
+          }),
+        ),
+    );
+
+    await Promise.all(
+      brand.products.map(async (product) => {
+        const reviewSummary = await firstValueFrom(
+          this.reviewClient
+            .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfReviews: number;
+                  averageRating: number;
+                };
+              }),
+            ),
+        );
+
+        const orderSummary = await firstValueFrom(
+          this.orderClient
+            .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.averageRating = reviewSummary.averageRating;
+        product.numberOfReviews = reviewSummary.numberOfReviews;
+        product.numberOfPurchases = orderSummary.numberOfPurchases;
+      }),
+    );
+
+    return brand;
   }
 }

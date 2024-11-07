@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -54,5 +55,24 @@ export class BrandController {
   @Get('/product/:slug')
   getBrandProduct(@Param() param: { slug: string }) {
     return this.brandService.getBrandProducts(param.slug);
+  }
+
+  @Get('/:slug')
+  getBrandBySlug(
+    @Param() params: { slug: string },
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('fromPrice') fromPrice?: string,
+    @Query('toPrice') toPrice?: string,
+    @Query('sortBy') sortBy?: string,
+  ) {
+    return this.brandService.getBrandBySlug(
+      params.slug,
+      Number.parseFloat(fromPrice),
+      Number.parseFloat(toPrice),
+      sortBy,
+      Number.parseInt(page),
+      Number.parseInt(limit),
+    );
   }
 }

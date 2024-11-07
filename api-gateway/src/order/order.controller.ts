@@ -47,4 +47,10 @@ export class OrderController {
     const orderId = Number.parseInt(params.orderId);
     return this.orderService.updateOrder(orderId, params.status);
   }
+
+  @Get('/me')
+  @UseGuards(AccessTokenGuard)
+  getMyOrders(@GetUser('id') userId: number) {
+    return this.orderService.getOrdersByUserId(userId);
+  }
 }

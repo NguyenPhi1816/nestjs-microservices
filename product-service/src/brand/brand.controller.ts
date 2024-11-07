@@ -27,4 +27,23 @@ export class BrandController {
   getBrandProducts(slug: string) {
     return this.brandService.getBrandProducts(slug);
   }
+
+  @MessagePattern({ cmd: 'get-brand-by-slug' })
+  getBrandBySlug(data: {
+    slug: string;
+    fromPrice?: number;
+    toPrice?: number;
+    sortBy: string;
+    page: number;
+    limit: number;
+  }) {
+    return this.brandService.getBrandBySlug(
+      data.slug,
+      data.fromPrice,
+      data.toPrice,
+      data.sortBy,
+      data.page,
+      data.limit,
+    );
+  }
 }

@@ -443,6 +443,17 @@ export class ProductService {
     return true;
   }
 
+  async getProductVariantQuantity(productVariantId: number) {
+    return this.prisma.productVariant.findUnique({
+      where: {
+        id: productVariantId,
+      },
+      select: {
+        quantity: true,
+      },
+    });
+  }
+
   async updateProductVariantQuantity(data: Update_PV_Quantity_Req[]) {
     // update quantity
     const quantityUpdatePromises = data.map((detail) => {
@@ -489,6 +500,15 @@ export class ProductService {
             },
           },
         },
+        prices: {
+          take: 1,
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            price: true,
+          },
+        },
       },
     });
 
@@ -498,6 +518,7 @@ export class ProductService {
       optionValue: result.optionValueVariants.map(
         (item) => item.optionValue.option.name + ': ' + item.optionValue.value,
       ),
+      price: result.prices[0].price,
     };
 
     return response;
@@ -541,6 +562,8 @@ export class ProductService {
     limit: number,
     page: number,
     sortBy: string,
+    fromPrice?: number,
+    toPrice?: number,
   ): Promise<ProductVariantResponseDto[]> {
     const baseProducts = await this.prisma.baseProduct.findMany({
       where: {
@@ -571,7 +594,7 @@ export class ProductService {
       },
     });
 
-    const response: ProductVariantResponseDto[] = baseProducts
+    let response: ProductVariantResponseDto[] = baseProducts
       .map((baseProduct, index) => {
         const productVariant = baseProduct.productVariants[0];
 
@@ -593,6 +616,12 @@ export class ProductService {
         }
       })
       .filter(Boolean) as ProductVariantResponseDto[];
+
+    if (typeof fromPrice === 'number' && typeof toPrice === 'number') {
+      response = response.filter(
+        (item) => item.price >= fromPrice && item.price <= toPrice,
+      );
+    }
 
     // Sort the response based on sortBy criteria
     switch (sortBy) {
@@ -631,19 +660,76 @@ export class ProductService {
       },
     };
 
-    if (!Number.isNaN(fromPrice) && !Number.isNaN(toPrice)) {
-      whereClause.productVariants = {
-        some: {
-          prices: {
-            some: {
-              price: {
-                gte: fromPrice,
-                lte: toPrice,
-              },
-            },
-          },
-        },
-      };
+    // Add price filter only if both fromPrice and toPrice are valid numbers
+    if (typeof fromPrice === 'number' && typeof toPrice === 'number') {
+      return this.getBaseProducts(
+        whereClause,
+        limit,
+        page,
+        sortBy,
+        fromPrice,
+        toPrice,
+      );
+    }
+
+    return this.getBaseProducts(whereClause, limit, page, sortBy);
+  }
+
+  async getProductsByBrandSlug(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<ProductVariantResponseDto[]> {
+    page = page ?? 1;
+    limit = limit ?? 20;
+
+    const whereClause = {
+      brand: {
+        slug: slug,
+      },
+    };
+
+    if (typeof fromPrice === 'number' && typeof toPrice === 'number') {
+      return this.getBaseProducts(
+        whereClause,
+        limit,
+        page,
+        sortBy,
+        fromPrice,
+        toPrice,
+      );
+    }
+
+    return this.getBaseProducts(whereClause, limit, page, sortBy);
+  }
+
+  async searchProductByName(
+    name: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = OrderBySearchParams.BEST_SELLING,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<ProductVariantResponseDto[]> {
+    const whereClause: any = {
+      name: {
+        contains: name,
+        mode: 'insensitive',
+      },
+    };
+
+    if (typeof fromPrice === 'number' && typeof toPrice === 'number') {
+      return this.getBaseProducts(
+        whereClause,
+        limit,
+        page,
+        sortBy,
+        fromPrice,
+        toPrice,
+      );
     }
 
     return this.getBaseProducts(whereClause, limit, page, sortBy);

@@ -7,6 +7,7 @@ export default class ProfileResponse {
   gender: string;
   dateOfBirth: string;
   image: string | null;
+  imageId: string | null;
   email: string;
   status: string;
   role: string;

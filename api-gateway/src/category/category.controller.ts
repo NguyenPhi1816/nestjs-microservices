@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -66,5 +67,10 @@ export class CategoryController {
   @Get('/client')
   getClientAllCategories() {
     return this.categoryService.getClientAllCategories();
+  }
+
+  @Get('/:slug')
+  getBySlug(@Param() params: { slug: string }) {
+    return this.categoryService.getBySlug(params.slug);
   }
 }

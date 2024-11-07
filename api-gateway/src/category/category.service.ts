@@ -207,4 +207,58 @@ export class CategoryService {
 
     return categories;
   }
+
+  async getBySlug(slug: string) {
+    const category = await firstValueFrom(
+      this.productClient.send({ cmd: 'get-category-by-slug' }, slug).pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response)),
+        ),
+        map((response) => {
+          return response;
+        }),
+      ),
+    );
+
+    await Promise.all(
+      category.products.map(async (product) => {
+        const reviewSummary = await firstValueFrom(
+          this.reviewClient
+            .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfReviews: number;
+                  averageRating: number;
+                };
+              }),
+            ),
+        );
+
+        const orderSummary = await firstValueFrom(
+          this.orderClient
+            .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.averageRating = reviewSummary.averageRating;
+        product.numberOfReviews = reviewSummary.numberOfReviews;
+        product.numberOfPurchases = orderSummary.numberOfPurchases;
+      }),
+    );
+
+    return category;
+  }
 }

@@ -221,4 +221,77 @@ export class OrderService {
       }
     }
   }
+
+  async getOrdersByUserId(userId: number) {
+    const orders: OrderResult[] = await firstValueFrom(
+      this.orderClient.send({ cmd: 'get-order-by-user-id' }, userId).pipe(
+        catchError((error) => {
+          console.log(error);
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      ),
+    );
+
+    if (orders) {
+      return await Promise.all(
+        orders.map(async (order) => {
+          const userProfile: ProfileResult = await firstValueFrom(
+            this.userClient.send({ cmd: 'get-profile' }, order.userId).pipe(
+              catchError((error) => {
+                console.log(error);
+                return throwError(() => new RpcException(error.response));
+              }),
+              map(async (response) => {
+                return response;
+              }),
+            ),
+          );
+
+          const productVariantPromises = order.orderDetails.map(async (item) =>
+            firstValueFrom(
+              this.productClient
+                .send(
+                  { cmd: 'get-product-variant-infor' },
+                  item.productVariantId,
+                )
+                .pipe(
+                  catchError((error) => {
+                    console.log(error);
+                    return throwError(() => new RpcException(error.response));
+                  }),
+                  map(async (response) => {
+                    return response;
+                  }),
+                ),
+            ),
+          );
+          const productVariant: Get_PV_Infor_Result[] = await Promise.all(
+            productVariantPromises,
+          );
+
+          const orderDetailResponse: OrderDetailResponse[] =
+            order.orderDetails.map((item, index) => ({
+              id: item.id,
+              optionValue: productVariant[index].optionValue,
+              price: item.price,
+              productImage: productVariant[index].productImage,
+              productName: productVariant[index].productName,
+              quantity: item.quantity,
+              review: null,
+            }));
+
+          if (userProfile) {
+            return {
+              ...order,
+              userName: userProfile.firstName + ' ' + userProfile.lastName,
+              orderDetails: orderDetailResponse,
+            };
+          }
+        }),
+      );
+    }
+  }
 }

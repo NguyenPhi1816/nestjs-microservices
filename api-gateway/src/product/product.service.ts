@@ -383,4 +383,202 @@ export class ProductService {
         }),
       );
   }
+
+  async getProductsByCategorySlug(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const products = await firstValueFrom(
+      this.productClient
+        .send(
+          { cmd: 'get-base-product-by-category-slug' },
+          { slug, fromPrice, toPrice, sortBy, page, limit },
+        )
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+          map((response) => {
+            return response;
+          }),
+        ),
+    );
+
+    await Promise.all(
+      products.map(async (product) => {
+        const reviewSummary = await firstValueFrom(
+          this.reviewClient
+            .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfReviews: number;
+                  averageRating: number;
+                };
+              }),
+            ),
+        );
+
+        const orderSummary = await firstValueFrom(
+          this.orderClient
+            .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.averageRating = reviewSummary.averageRating;
+        product.numberOfReviews = reviewSummary.numberOfReviews;
+        product.numberOfPurchases = orderSummary.numberOfPurchases;
+      }),
+    );
+
+    return products;
+  }
+
+  async getProductsByBrandSlug(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const products = await firstValueFrom(
+      this.productClient
+        .send(
+          { cmd: 'get-base-product-by-brand-slug' },
+          { slug, fromPrice, toPrice, sortBy, page, limit },
+        )
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+          map((response) => {
+            return response;
+          }),
+        ),
+    );
+
+    await Promise.all(
+      products.map(async (product) => {
+        const reviewSummary = await firstValueFrom(
+          this.reviewClient
+            .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfReviews: number;
+                  averageRating: number;
+                };
+              }),
+            ),
+        );
+
+        const orderSummary = await firstValueFrom(
+          this.orderClient
+            .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.averageRating = reviewSummary.averageRating;
+        product.numberOfReviews = reviewSummary.numberOfReviews;
+        product.numberOfPurchases = orderSummary.numberOfPurchases;
+      }),
+    );
+
+    return products;
+  }
+
+  async searchProductByName(
+    slug: string,
+    fromPrice?: number,
+    toPrice?: number,
+    sortBy: string = 'bestSelling',
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const products = await firstValueFrom(
+      this.productClient
+        .send(
+          { cmd: 'search-base-product-by-name' },
+          { slug, fromPrice, toPrice, sortBy, page, limit },
+        )
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+          map((response) => {
+            return response;
+          }),
+        ),
+    );
+
+    await Promise.all(
+      products.map(async (product) => {
+        const reviewSummary = await firstValueFrom(
+          this.reviewClient
+            .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfReviews: number;
+                  averageRating: number;
+                };
+              }),
+            ),
+        );
+
+        const orderSummary = await firstValueFrom(
+          this.orderClient
+            .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.averageRating = reviewSummary.averageRating;
+        product.numberOfReviews = reviewSummary.numberOfReviews;
+        product.numberOfPurchases = orderSummary.numberOfPurchases;
+      }),
+    );
+
+    return products;
+  }
 }

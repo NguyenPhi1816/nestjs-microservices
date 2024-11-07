@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -12,6 +13,7 @@ import { UserRole } from 'src/constrants/enum/user-role.enum';
 import { AccountStatus } from 'src/constrants/enum/account-status.enum';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import AuthResponseDto from './dto/auth-response.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -103,6 +105,45 @@ export class AuthService {
       } else {
         throw new RpcException(error);
       }
+    }
+  }
+
+  async updatePassword(userId: number, requestBody: UpdatePasswordDto) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          account: true,
+        },
+      });
+
+      // check old password
+      const isOldPasswordMatched = await argon.verify(
+        user.account.password,
+        requestBody.oldPassword,
+      );
+
+      if (!isOldPasswordMatched) {
+        throw new RpcException(
+          new BadRequestException('Mật khẩu cũ không đúng.'),
+        );
+      }
+
+      // generate the hashed password
+      const hashedPassword = await argon.hash(requestBody.newPassword);
+
+      await this.prisma.account.update({
+        where: {
+          id: user.account.id,
+        },
+        data: {
+          password: hashedPassword,
+        },
+      });
+
+      return { status: 200, message: 'Update password successful.' };
+    } catch (error) {
+      throw error;
     }
   }
 }

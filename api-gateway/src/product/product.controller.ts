@@ -140,4 +140,61 @@ export class ProductController {
       Number.parseInt(params.imageId),
     );
   }
+
+  @Get('products/category/:slug')
+  getBaseProductsByCategorySlug(
+    @Param() param: { slug: string },
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('fromPrice') fromPrice?: string,
+    @Query('toPrice') toPrice?: string,
+    @Query('sortBy') sortBy?: string,
+  ) {
+    return this.productService.getProductsByCategorySlug(
+      param.slug,
+      Number.parseFloat(fromPrice),
+      Number.parseFloat(toPrice),
+      sortBy,
+      Number.parseInt(page),
+      Number.parseInt(limit),
+    );
+  }
+
+  @Get('products/brand/:slug')
+  getBaseProductsByBrandSlug(
+    @Param() param: { slug: string },
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('fromPrice') fromPrice?: string,
+    @Query('toPrice') toPrice?: string,
+    @Query('sortBy') sortBy?: string,
+  ) {
+    return this.productService.getProductsByBrandSlug(
+      param.slug,
+      Number.parseFloat(fromPrice),
+      Number.parseFloat(toPrice),
+      sortBy,
+      Number.parseInt(page),
+      Number.parseInt(limit),
+    );
+  }
+
+  @Get('products/search/:name')
+  searchProductByName(
+    @Param() param: { name: string },
+    @Query('sortBy') sortBy: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+    @Query('fromPrice') fromPrice?: string,
+    @Query('toPrice') toPrice?: string,
+  ) {
+    return this.productService.searchProductByName(
+      param.name,
+      Number.parseFloat(fromPrice),
+      Number.parseFloat(toPrice),
+      sortBy,
+      Number.parseInt(page),
+      Number.parseInt(limit),
+    );
+  }
 }

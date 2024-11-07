@@ -4,7 +4,6 @@ import { MessagePattern } from '@nestjs/microservices';
 import { Create_BP_Req } from './dto/base-product-requests/create-BP.dto';
 import { Create_OVs } from './dto/option-value-requests/create-OVs.dto';
 import { Create_PV_Req } from './dto/product-variant-requests/create-product-variant.dto';
-import Add_BP_Image_Req from './dto/base-product-requests/add-BP-image.dto';
 import UpdateProductVariantDto from './dto/product-variant-requests/update-product-variant.dto';
 import { Update_BP_Req } from './dto/base-product-requests/update-BP.dto';
 import { Update_BP_Status_Req } from './dto/base-product-requests/update-BP-status.dto';
@@ -85,6 +84,11 @@ export class ProductController {
     return this.productService.getProductVariantInfor(productId);
   }
 
+  @MessagePattern({ cmd: 'get-product-variant-quantity' })
+  getProductVariantQuantity(productId: number) {
+    return this.productService.getProductVariantQuantity(productId);
+  }
+
   @MessagePattern({ cmd: 'get-product-variant-by-base-product-slug' })
   getPVByBPSlug(slug: string) {
     return this.productService.getProductVariantByBPSlug(slug);
@@ -93,5 +97,62 @@ export class ProductController {
   @MessagePattern({ cmd: 'get-base-product-by-slug-client' })
   getBPBySlug(slug: string) {
     return this.productService.getBySlug(slug);
+  }
+
+  @MessagePattern({ cmd: 'get-base-product-by-category-slug' })
+  getBaseProductsByCategorySlug(data: {
+    slug: string;
+    page: number;
+    limit: number;
+    fromPrice?: number;
+    toPrice?: number;
+    sortBy?: string;
+  }) {
+    return this.productService.getProductsByCategorySlug(
+      data.slug,
+      data.fromPrice,
+      data.toPrice,
+      data.sortBy,
+      data.page,
+      data.limit,
+    );
+  }
+
+  @MessagePattern({ cmd: 'get-base-product-by-brand-slug' })
+  getBaseProductsByBrandSlug(data: {
+    slug: string;
+    page: number;
+    limit: number;
+    fromPrice?: number;
+    toPrice?: number;
+    sortBy?: string;
+  }) {
+    return this.productService.getProductsByBrandSlug(
+      data.slug,
+      data.fromPrice,
+      data.toPrice,
+      data.sortBy,
+      data.page,
+      data.limit,
+    );
+  }
+
+  @MessagePattern({ cmd: 'search-base-product-by-name' })
+  searchProductByName(data: {
+    slug: string;
+    page: number;
+    limit: number;
+    fromPrice?: number;
+    toPrice?: number;
+    sortBy?: string;
+  }) {
+    return this.productService.searchProductByName(
+      data.slug,
+      data.fromPrice,
+      data.toPrice,
+      data.sortBy,
+      data.page,
+      data.limit,
+    );
   }
 }

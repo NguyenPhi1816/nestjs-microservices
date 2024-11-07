@@ -284,4 +284,27 @@ export class CategoryService {
     );
     return response;
   }
+
+  async getBySlug(slug: string, limit: number = 100) {
+    try {
+      const category = await this.prisma.category.findUnique({
+        where: { slug: slug },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          image: true,
+          description: true,
+          parent: true,
+        },
+      });
+      const products = await this.productService.getProductsByCategorySlug(
+        slug,
+        limit,
+      );
+      return { ...category, products };
+    } catch (error) {
+      throw error;
+    }
+  }
 }

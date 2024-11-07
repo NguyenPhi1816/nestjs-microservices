@@ -10,6 +10,7 @@ export class UserResponseDto {
   gender: string;
   dateOfBirth: Date;
   image: string | null;
+  imageId: string | null;
   email: string;
   status: string;
   role: string;

@@ -37,4 +37,9 @@ export class CategoryController {
   getClientAllCategories() {
     return this.categoryService.getClientAllCategories();
   }
+
+  @MessagePattern({ cmd: 'get-category-by-slug' })
+  getCategoryBySlug(slug: string) {
+    return this.categoryService.getBySlug(slug);
+  }
 }

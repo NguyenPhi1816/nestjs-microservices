@@ -38,4 +38,9 @@ export class OrderController {
   async getOrderSummary(productVariantIds: number[]) {
     return this.orderService.getOrderSummary(productVariantIds);
   }
+
+  @MessagePattern({ cmd: 'get-order-by-user-id' })
+  async getOrderByUserId(userId: number) {
+    return this.orderService.getOrdersByUserId(userId);
+  }
 }

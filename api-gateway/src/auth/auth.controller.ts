@@ -1,4 +1,13 @@
-import { Body, Controller, Inject, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import LoginDto from './dto/login.dto';
 import { catchError, map, throwError } from 'rxjs';
@@ -6,6 +15,9 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
 import AuthResponseDto from './dto/auth-response.dto';
 import TokenResponseDto from './dto/token-response.dto';
+import { AccessTokenGuard } from './guard/access-token.guard';
+import { GetUser } from './decorator/get-user.decorator';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Controller('api/auth')
 export class AuthController {
@@ -45,6 +57,22 @@ export class AuthController {
   register(@Body() body: RegisterDto) {
     return this.client
       .send({ cmd: 'register' }, body)
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response)),
+        ),
+      );
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Put('update-password')
+  @UseGuards(AccessTokenGuard)
+  updatePassword(
+    @GetUser('id') userId: number,
+    @Body() requestBody: UpdatePasswordDto,
+  ) {
+    return this.client
+      .send({ cmd: 'update-password' }, { userId, requestBody })
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response)),

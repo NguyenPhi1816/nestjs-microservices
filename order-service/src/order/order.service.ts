@@ -422,4 +422,40 @@ export class OrderService {
       numberOfPurchases: numberOfPurchasesResult._sum.quantity ?? 0,
     };
   }
+
+  async updateVNpayPayment(orderId: number, transactionId: string) {
+    try {
+      await this.prisma.payment.update({
+        where: { orderId: orderId },
+        data: {
+          status: PaymentStatus.SUCCESS,
+          paymentDate: new Date(),
+          transactionId: transactionId,
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getOrdersByUserId(userId: number): Promise<OrderResponse[]> {
+    try {
+      const orders = await this.prisma.order.findMany({
+        where: { userId: userId },
+        select: {
+          id: true,
+        },
+      });
+
+      const promises = orders.map((order) => this.getOrderDetailById(order.id));
+      let response = await Promise.all(promises);
+      response = response.sort(
+        (a, b) =>
+          new Date(b.createAt).getTime() - new Date(a.createAt).getTime(),
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
 }

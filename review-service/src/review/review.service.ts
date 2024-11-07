@@ -123,7 +123,6 @@ export class ReviewService {
   }
 
   async getReviewSummary(productVariantIds: number[]) {
-    console.log(productVariantIds);
     const whereClause = {
       productVariantId: {
         in: productVariantIds,
