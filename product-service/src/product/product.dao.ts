@@ -51,6 +51,49 @@ export class BaseProductDAO {
     return res;
   }
 
+  async getBaseProductByIds(ids: number[]): Promise<List_BP_Admin_Res[]> {
+    const products = await this.prisma.baseProduct.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        brand: {
+          select: {
+            name: true,
+          },
+        },
+        status: true,
+        baseProductCategories: {
+          select: {
+            category: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const res = products.map((item): List_BP_Admin_Res => {
+      return {
+        id: item.id,
+        slug: item.slug,
+        name: item.name,
+        status: item.status,
+        brand: item.brand.name,
+        categories: item.baseProductCategories.map((bpc) => bpc.category.name),
+      };
+    });
+
+    return res;
+  }
+
   async createBaseProduct(
     data: any,
     prisma: any = this.prisma,

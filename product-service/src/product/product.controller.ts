@@ -9,6 +9,7 @@ import { Update_BP_Req } from './dto/base-product-requests/update-BP.dto';
 import { Update_BP_Status_Req } from './dto/base-product-requests/update-BP-status.dto';
 import { CreateOrderDetailDto } from './dto/order-detail/create-order-detail.dto';
 import Update_PV_Quantity_Req from './dto/product-variant-requests/update-product-variant-quantity.dto';
+import PriceChangeStatisticsDto from './dto/product-variant-requests/price-change-statistic.dto';
 
 @Controller('product')
 export class ProductController {
@@ -17,6 +18,11 @@ export class ProductController {
   @MessagePattern({ cmd: 'get-all-base-products' })
   getAllBaseProducts() {
     return this.productService.getAllBaseProduct();
+  }
+
+  @MessagePattern({ cmd: 'get-base-product-by-ids' })
+  getBaseProductByIds(ids: number[]) {
+    return this.productService.getBaseProductByIds(ids);
   }
 
   @MessagePattern({ cmd: 'get-base-product-by-slug' })
@@ -154,5 +160,10 @@ export class ProductController {
       data.page,
       data.limit,
     );
+  }
+
+  @MessagePattern({ cmd: 'price-change-statistics' })
+  priceChangeStatistics(data: PriceChangeStatisticsDto) {
+    return this.productService.priceChangeStatistics(data);
   }
 }

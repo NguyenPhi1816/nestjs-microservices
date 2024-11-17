@@ -53,4 +53,18 @@ export class OrderController {
   getMyOrders(@GetUser('id') userId: number) {
     return this.orderService.getOrdersByUserId(userId);
   }
+
+  @Get('statistic')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getOrderStatistic() {
+    return this.orderService.getOrderStatistic();
+  }
+
+  @Get('statistic/:slug')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getRevenueByProductVariantIds(@Param() params: { slug: string }) {
+    return this.orderService.getRevenueByProductVariantIds(params.slug);
+  }
 }

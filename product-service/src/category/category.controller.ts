@@ -13,6 +13,11 @@ export class CategoryController {
     return this.categoryService.getAllCategories();
   }
 
+  @MessagePattern({ cmd: 'get-category-by-ids' })
+  getCategoryByIds(ids: number[]) {
+    return this.categoryService.getCategoryByIds(ids);
+  }
+
   @MessagePattern({ cmd: 'create-category' })
   createCategory(data: CreateCategoryDto) {
     return this.categoryService.createCategory(data);

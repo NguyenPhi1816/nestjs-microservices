@@ -28,6 +28,11 @@ import UpdateProductVariantDto from './dto/update-product-variant.dto';
 import UpdateProductVariantRequestDto from './dto/update-product-variant-request.dto';
 import { Update_BaseProduct_Req } from './dto/update-bp.dto';
 import { BaseProductResponseDto } from './dto/BP.dto';
+import { UserActivity } from 'src/constrants/enum/user-activity.enum';
+import GetProductStatisticsDto from './dto/get-product-statistics.dto';
+import GetPurchasesStatisticsDto from './dto/get-purchases-statistics.dto';
+import PriceChangeStatisticsDto from './dto/price-change-statistic.dto';
+import { response } from 'express';
 
 @Injectable()
 export class ProductService {
@@ -35,6 +40,7 @@ export class ProductService {
   private mediaClient: ClientProxy;
   private reviewClient: ClientProxy;
   private orderClient: ClientProxy;
+  private userClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -65,6 +71,13 @@ export class ProductService {
         port: configService.get('ORDER_SERVICE_PORT'),
       },
     });
+    this.userClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('USER_SERVICE_HOST'),
+        port: configService.get('USER_SERVICE_PORT'),
+      },
+    });
   }
 
   getAllBaseProducts() {
@@ -85,7 +98,7 @@ export class ProductService {
       );
   }
 
-  async getBPBySlug(slug: string) {
+  async getBPBySlug(slug: string, user?: any) {
     const baseProduct = await firstValueFrom(
       this.productClient
         .send({ cmd: 'get-base-product-by-slug-client' }, slug)
@@ -137,6 +150,30 @@ export class ProductService {
     baseProduct.averageRating = reviewSummary.averageRating;
     baseProduct.numberOfReviews = reviewSummary.numberOfReviews;
     baseProduct.numberOfPurchases = orderSummary.numberOfPurchases;
+
+    if (user) {
+      await Promise.all(
+        baseProduct.categories.map((category) => {
+          const req = {
+            userId: user.sub,
+            categoryId: category.id,
+            productId: baseProduct.id,
+            activityType: UserActivity.VIEW,
+          };
+
+          return firstValueFrom(
+            this.userClient.send({ cmd: 'save-user-activity' }, req).pipe(
+              catchError((error) => {
+                return throwError(() => new RpcException(error.response));
+              }),
+              map(async (response) => {
+                return response;
+              }),
+            ),
+          );
+        }),
+      );
+    }
 
     return baseProduct;
   }
@@ -517,6 +554,7 @@ export class ProductService {
   }
 
   async searchProductByName(
+    user: any,
     slug: string,
     fromPrice?: number,
     toPrice?: number,
@@ -579,6 +617,132 @@ export class ProductService {
       }),
     );
 
+    if (user) {
+      await firstValueFrom(
+        this.userClient.send(
+          { cmd: 'save-user-search-history' },
+          { userId: user.sub, searchQuery: slug },
+        ),
+      );
+    }
+
     return products;
+  }
+
+  async getProductStatistics(data: GetProductStatisticsDto) {
+    return this.userClient.send({ cmd: 'get-product-statistics' }, data).pipe(
+      catchError((error) => {
+        return throwError(() => new RpcException(error.response));
+      }),
+      map(async (response) => {
+        return response;
+      }),
+    );
+  }
+
+  async getPurchasesStatistics(data: GetPurchasesStatisticsDto) {
+    return this.userClient.send({ cmd: 'get-purchases-statistics' }, data).pipe(
+      catchError((error) => {
+        return throwError(() => new RpcException(error.response));
+      }),
+      map(async (response) => {
+        return response;
+      }),
+    );
+  }
+
+  async priceChangeStatistics(data: PriceChangeStatisticsDto) {
+    return this.productClient
+      .send({ cmd: 'price-change-statistics' }, data)
+      .pipe(
+        catchError((error) => {
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      );
+  }
+
+  async getTop10MostPurchasedProducts() {
+    const top10ProductIds = await firstValueFrom(
+      this.userClient
+        .send(
+          { cmd: 'get-top-10' },
+          { activityType: UserActivity.PURCHASE, type: 'top10Products' },
+        )
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        ),
+    );
+
+    const result = await firstValueFrom(
+      this.productClient
+        .send(
+          { cmd: 'get-base-product-by-ids' },
+          top10ProductIds.map((item) => item.id),
+        )
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        ),
+    );
+
+    const response = result.map((item, index) => ({
+      ...item,
+      count: top10ProductIds[index].count,
+    }));
+
+    return response;
+  }
+
+  async getTop10MostPurchasedCategories() {
+    const top10CategoryIds = await firstValueFrom(
+      this.userClient
+        .send(
+          { cmd: 'get-top-10' },
+          { activityType: UserActivity.PURCHASE, type: 'top10Categories' },
+        )
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        ),
+    );
+
+    const result = await firstValueFrom(
+      this.productClient
+        .send(
+          { cmd: 'get-category-by-ids' },
+          top10CategoryIds.map((item) => item.id),
+        )
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        ),
+    );
+
+    const response = result.map((item, index) => ({
+      ...item,
+      count: top10CategoryIds[index].count,
+    }));
+
+    return response;
   }
 }

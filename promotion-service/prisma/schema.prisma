@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Promotion {
+  id        Int      @id @default(autoincrement())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+
+  discounts Discount[]
+  vouchers  Voucher[]
+}
+
+model Discount {
+  id          Int    @id @default(autoincrement())
+  type        String
+  value       Float
+  status      String
+  promotionId Int
+
+  promotion            Promotion             @relation(fields: [promotionId], references: [id])
+  baseProductDiscounts baseProductDiscount[]
+}
+
+model Voucher {
+  id               Int    @id @default(autoincrement())
+  code             String
+  type             String
+  value            Float
+  minOrderValue    Float
+  maxDiscountValue Float
+  usageLimit       Int
+  usedCount        Int @default(0)
+  status           String
+  promotionId      Int
+
+  promotion Promotion @relation(fields: [promotionId], references: [id])
+}
+
+model baseProductDiscount {
+  id            Int @id @default(autoincrement())
+  discountId    Int
+  baseProductId Int
+
+  discount Discount @relation(fields: [discountId], references: [id])
+}

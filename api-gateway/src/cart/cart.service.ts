@@ -9,11 +9,13 @@ import {
 import { catchError, firstValueFrom, map, throwError } from 'rxjs';
 import { AddToCartRequestDto } from './dto/add-to-cart.dto';
 import { UpdateCartQuantityRequestDto } from './dto/update-cart-quantity.dto';
+import { UserActivity } from 'src/constrants/enum/user-activity.enum';
 
 @Injectable()
 export class CartService {
   private orderClient: ClientProxy;
   private productClient: ClientProxy;
+  private userClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.orderClient = ClientProxyFactory.create({
@@ -28,6 +30,13 @@ export class CartService {
       options: {
         host: configService.get('PRODUCT_SERVICE_HOST'),
         port: configService.get('PRODUCT_SERVICE_PORT'),
+      },
+    });
+    this.userClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('USER_SERVICE_HOST'),
+        port: configService.get('USER_SERVICE_PORT'),
       },
     });
   }
@@ -108,6 +117,28 @@ export class CartService {
             return response;
           }),
         ),
+    );
+
+    await Promise.all(
+      addToCartDto.categoryIds.map((categoryId) => {
+        const req = {
+          userId: userId,
+          categoryId: categoryId,
+          productId: addToCartDto.baseProductId,
+          activityType: UserActivity.CART,
+        };
+
+        return firstValueFrom(
+          this.userClient.send({ cmd: 'save-user-activity' }, req).pipe(
+            catchError((error) => {
+              return throwError(() => new RpcException(error.response));
+            }),
+            map(async (response) => {
+              return response;
+            }),
+          ),
+        );
+      }),
     );
 
     const response = await Promise.all(

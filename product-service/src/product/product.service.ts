@@ -33,6 +33,7 @@ import { ProductVariantResponseDto } from './dto/product-variant-responses/PV-cl
 import { OrderBySearchParams } from 'src/constants/orderBySearchParams';
 import OVs_Res from './dto/option-value-responses/OVs.dto';
 import { BaseProductResponseDto } from './dto/base-product-responses/BP.dto';
+import PriceChangeStatisticsDto from './dto/product-variant-requests/price-change-statistic.dto';
 
 @Injectable()
 export class ProductService {
@@ -45,6 +46,16 @@ export class ProductService {
     try {
       const responses: List_BP_Admin_Res[] =
         await this.baseProductDAO.findAllBaseProducts();
+      return responses;
+    } catch (error) {
+      throw new RpcException(new BadRequestException(error.message));
+    }
+  }
+
+  async getBaseProductByIds(ids: number[]): Promise<List_BP_Admin_Res[]> {
+    try {
+      const responses: List_BP_Admin_Res[] =
+        await this.baseProductDAO.getBaseProductByIds(ids);
       return responses;
     } catch (error) {
       throw new RpcException(new BadRequestException(error.message));
@@ -482,6 +493,12 @@ export class ProductService {
       select: {
         baseProduct: {
           select: {
+            id: true,
+            baseProductCategories: {
+              select: {
+                categoryId: true,
+              },
+            },
             name: true,
           },
         },
@@ -513,6 +530,10 @@ export class ProductService {
     });
 
     const response = {
+      baseProductId: result.baseProduct.id,
+      categoryIds: result.baseProduct.baseProductCategories.map(
+        (item) => item.categoryId,
+      ),
       productName: result.baseProduct.name,
       productImage: result.image,
       optionValue: result.optionValueVariants.map(
@@ -576,6 +597,11 @@ export class ProductService {
         id: true,
         slug: true,
         name: true,
+        baseProductCategories: {
+          select: {
+            categoryId: true,
+          },
+        },
         productVariants: {
           select: {
             id: true,
@@ -601,6 +627,9 @@ export class ProductService {
         if (productVariant) {
           return {
             id: baseProduct.id,
+            categoryIds: baseProduct.baseProductCategories.map(
+              (item) => item.categoryId,
+            ),
             image: productVariant.image,
             name: baseProduct.name,
             price: productVariant.prices[0].price,
@@ -714,11 +743,13 @@ export class ProductService {
     page: number = 1,
     limit: number = 20,
   ): Promise<ProductVariantResponseDto[]> {
+    const keywords = name.split(' ');
+    const conditions = keywords.map((keyword) => ({
+      name: { contains: keyword, mode: 'insensitive' },
+    }));
+
     const whereClause: any = {
-      name: {
-        contains: name,
-        mode: 'insensitive',
-      },
+      AND: conditions,
     };
 
     if (typeof fromPrice === 'number' && typeof toPrice === 'number') {
@@ -893,5 +924,46 @@ export class ProductService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async priceChangeStatistics(dto: PriceChangeStatisticsDto) {
+    const productVariants = await this.prisma.productVariant.findMany({
+      where: { baseProductId: dto.baseProductId },
+      select: {
+        optionValueVariants: {
+          select: {
+            optionValue: {
+              select: {
+                value: true,
+              },
+            },
+          },
+        },
+        prices: {
+          where: {
+            createdAt: {
+              gte: new Date(dto.fromDate),
+              lte: new Date(dto.toDate),
+            },
+          },
+          select: {
+            createdAt: true,
+            price: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+    return productVariants.map((item) => {
+      const optionValue = item.optionValueVariants
+        .map((item) => item.optionValue.value)
+        .join(', ');
+      return {
+        optionValue: optionValue ? optionValue : 'Mặc định',
+        prices: item.prices,
+      };
+    });
   }
 }

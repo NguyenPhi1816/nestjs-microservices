@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import LoginDto from './dto/login.dto';
@@ -14,6 +15,7 @@ import { AccountStatus } from 'src/constrants/enum/account-status.enum';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import AuthResponseDto from './dto/auth-response.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdatePasswordByPhoneNumberDto } from './dto/update-password-by-phone-number.dto';
 
 @Injectable()
 export class AuthService {
@@ -47,7 +49,7 @@ export class AuthService {
     }
 
     const response: AuthResponseDto = {
-      id: account.id,
+      id: account.user.id,
       name: account.user.firstName + ' ' + account.user.lastName,
       email: account.user.email,
       image: account.user.image,
@@ -127,6 +129,39 @@ export class AuthService {
         throw new RpcException(
           new BadRequestException('Mật khẩu cũ không đúng.'),
         );
+      }
+
+      // generate the hashed password
+      const hashedPassword = await argon.hash(requestBody.newPassword);
+
+      await this.prisma.account.update({
+        where: {
+          id: user.account.id,
+        },
+        data: {
+          password: hashedPassword,
+        },
+      });
+
+      return { status: 200, message: 'Update password successful.' };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updatePasswordByPhoneNumber(
+    requestBody: UpdatePasswordByPhoneNumberDto,
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { phoneNumber: requestBody.phoneNumber },
+        select: {
+          account: true,
+        },
+      });
+
+      if (!user) {
+        throw new RpcException(new NotFoundException('User not found'));
       }
 
       // generate the hashed password

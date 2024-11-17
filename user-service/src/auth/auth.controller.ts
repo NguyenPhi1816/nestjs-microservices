@@ -4,6 +4,7 @@ import LoginDto from './dto/login.dto';
 import { MessagePattern } from '@nestjs/microservices';
 import { RegisterDto } from './dto/register.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdatePasswordByPhoneNumberDto } from './dto/update-password-by-phone-number.dto';
 
 @Controller()
 export class AuthController {
@@ -25,5 +26,10 @@ export class AuthController {
     requestBody: UpdatePasswordDto;
   }): any {
     return this.authService.updatePassword(data.userId, data.requestBody);
+  }
+
+  @MessagePattern({ cmd: 'update-password-by-phone-number' })
+  updatePasswordByPhoneNumber(data: UpdatePasswordByPhoneNumberDto): any {
+    return this.authService.updatePasswordByPhoneNumber(data);
   }
 }

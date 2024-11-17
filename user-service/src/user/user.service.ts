@@ -99,6 +99,59 @@ export class UserService {
     return response;
   }
 
+  async getProfileByPhoneNumber(phoneNumber: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        phoneNumber: phoneNumber,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        address: true,
+        phoneNumber: true,
+        gender: true,
+        dateOfBirth: true,
+        image: true,
+        imageId: true,
+        email: true,
+        account: {
+          select: {
+            status: true,
+            userRole: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new RpcException(
+        new NotFoundException('Không tìm thấy người dùng'),
+      );
+    }
+
+    const response: ProfileResponse = {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      address: user.address,
+      phoneNumber: user.phoneNumber,
+      gender: user.gender,
+      dateOfBirth: user.dateOfBirth.toString(),
+      image: user.image,
+      imageId: user.imageId,
+      email: user.email,
+      status: user.account.status,
+      role: user.account.userRole.name,
+    };
+
+    return response;
+  }
+
   async updateUserStatus(data: UpdateUserStatusReq): Promise<UserResponseDto> {
     try {
       const user = await this.prisma.user.update({

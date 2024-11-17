@@ -8,4 +8,12 @@ export class AddToCartRequestDto {
   @IsInt()
   @Min(1)
   quantity: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  baseProductId: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  categoryIds: number[];
 }

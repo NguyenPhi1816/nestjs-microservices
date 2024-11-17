@@ -458,4 +458,78 @@ export class OrderService {
       throw error;
     }
   }
+
+  async getOrderStatistic() {
+    // Đếm số lượng đơn hàng theo từng status
+    const groupedResult = await this.prisma.order.groupBy({
+      by: ['status'],
+      _count: {
+        _all: true,
+      },
+    });
+
+    // Đếm tổng số đơn hàng
+    const totalOrders = await this.prisma.order.count();
+
+    const orderDetails = await this.prisma.orderDetail.findMany({
+      where: {
+        order: {
+          status: OrderStatus.SUCCESS,
+        },
+      },
+      select: {
+        price: true,
+        quantity: true,
+      },
+    });
+
+    const totalRevenue = orderDetails.reduce(
+      (prev, curr) => prev + curr.price * curr.quantity,
+      0,
+    );
+
+    // Chuyển đổi kết quả thành một object dễ đọc hơn
+    const orderCounts = {
+      TOTAL_REVENUE: totalRevenue,
+      TOTAL: totalOrders,
+      [OrderStatus.PENDING]: 0,
+      [OrderStatus.SHIPPING]: 0,
+      [OrderStatus.SUCCESS]: 0,
+      [OrderStatus.CANCEL]: 0,
+    };
+
+    groupedResult.forEach((item) => {
+      orderCounts[item.status as OrderStatus] = item._count._all;
+    });
+
+    return orderCounts;
+  }
+
+  async getRevenueByProductVariantIds(productVariantIds: number[]) {
+    const orderDetails = await this.prisma.orderDetail.findMany({
+      where: {
+        productVariantId: {
+          in: productVariantIds,
+        },
+        order: {
+          status: OrderStatus.SUCCESS,
+        },
+      },
+      select: {
+        quantity: true,
+        price: true,
+      },
+    });
+
+    const totalRevenue = orderDetails.reduce(
+      (prev, curr) => {
+        prev.totalSold = prev.totalSold + curr.quantity;
+        prev.totalRevenue = prev.totalRevenue + curr.price * curr.quantity;
+        return prev;
+      },
+      { totalSold: 0, totalRevenue: 0 },
+    );
+
+    return totalRevenue;
+  }
 }

@@ -66,11 +66,9 @@ model UserSearchHistory {
   id          Int      @id @default(autoincrement())
   userId      Int
   searchQuery String
-  categoryId  Int?
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
-  @@index([categoryId, createdAt])
 }

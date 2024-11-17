@@ -15,6 +15,8 @@ import ProfileResult from './dto/profile-result.dto';
 import Get_PV_Infor_Result from './dto/get-pv-infor-result.dto';
 import { OrderDetailResponse } from './dto/order-detail-response.dto';
 import { OrderStatus } from 'src/constrants/enum/order-status.enum';
+import { UserActivity } from 'src/constrants/enum/user-activity.enum';
+import { GetProductVariantResult } from 'src/review/dto/get-product-variant-result.dto';
 
 @Injectable()
 export class OrderService {
@@ -173,6 +175,29 @@ export class OrderService {
             ),
         );
 
+        await Promise.all(
+          data.orderDetails.flatMap((orderDetail) =>
+            orderDetail.categoryIds.map((categoryId) => {
+              const req = {
+                userId,
+                categoryId,
+                productId: orderDetail.baseProductId,
+                activityType: UserActivity.PURCHASE,
+              };
+
+              return firstValueFrom(
+                this.userClient
+                  .send({ cmd: 'save-user-activity' }, req)
+                  .pipe(
+                    catchError((error) =>
+                      throwError(() => new RpcException(error.response)),
+                    ),
+                  ),
+              );
+            }),
+          ),
+        );
+
         if (updateResult) {
           return createOrderResult;
         }
@@ -293,5 +318,27 @@ export class OrderService {
         }),
       );
     }
+  }
+
+  async getOrderStatistic() {
+    return this.orderClient.send({ cmd: 'get-order-statistic' }, {});
+  }
+
+  async getRevenueByProductVariantIds(slug: string) {
+    const productVariant: GetProductVariantResult[] = await firstValueFrom(
+      this.productClient
+        .send({ cmd: 'get-product-variant-by-base-product-slug' }, slug)
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.response)),
+          ),
+          map((response) => response as GetProductVariantResult[]),
+        ),
+    );
+
+    return this.orderClient.send(
+      { cmd: 'get-revenue-by-product-variant-ids' },
+      productVariant.map((item) => item.id),
+    );
   }
 }

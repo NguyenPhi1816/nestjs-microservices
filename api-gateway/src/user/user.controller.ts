@@ -3,8 +3,11 @@ import {
   Controller,
   Get,
   Inject,
+  Param,
   Post,
   Put,
+  Query,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -28,6 +31,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import UploadResponse from 'src/product/dto/upload-response.dto';
 import CreateCategoryRequestDto from 'src/category/dto/create-category-request.dto';
 import { UpdateUserInforRequestDto } from './dto/update-user-infor-request.dto';
+import { SaveUserActivityDto } from './dto/save-user-activity.dto';
+import { OptionalAuthGuard } from 'src/auth/guard/optional-auth.guard';
 
 @Controller('api/users')
 export class UserController {
@@ -133,16 +138,47 @@ export class UserController {
       );
   }
 
-  @Post('seed-data')
-  @UseGuards(AccessTokenGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  seedData() {
-    return this.client.send({ cmd: 'seed-data' }, {});
+  @Post('save-user-activity')
+  @UseGuards(AccessTokenGuard)
+  async saveUserActivity(
+    @GetUser('id') userId: number,
+    @Body() data: SaveUserActivityDto,
+  ) {
+    await Promise.all(
+      data.categoryIds.map((categoryId) => {
+        const req = {
+          userId: userId,
+          categoryId: categoryId,
+          productId: data.baseProductId,
+          activityType: data.activityType,
+        };
+
+        return firstValueFrom(
+          this.client.send({ cmd: 'save-user-activity' }, req).pipe(
+            catchError((error) => {
+              return throwError(() => new RpcException(error.response));
+            }),
+            map(async (response) => {
+              return response;
+            }),
+          ),
+        );
+      }),
+    );
+    return { status: 200, message: 'Lưu thông tin thành công' };
   }
 
-  @Get('get-top-categories')
-  @UseGuards(AccessTokenGuard)
-  getTopRecommendation(@GetUser('id') userId: number) {
-    return this.client.send({ cmd: 'get-top-categories' }, userId);
+  @Get('get-suggested-keywords')
+  @UseGuards(OptionalAuthGuard)
+  getSuggestedKeywordsForUser(
+    @Req() request: any,
+    @Query() query: { topN?: string },
+  ) {
+    if (request.user) {
+      return this.client.send(
+        { cmd: 'get-suggested-keywords' },
+        { userId: request.user.sub, topN: Number.parseInt(query.topN) },
+      );
+    }
   }
 }

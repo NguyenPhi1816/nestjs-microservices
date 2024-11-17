@@ -2,10 +2,14 @@ import { Module } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { JwtModule } from '@nestjs/jwt';
+import { OptionalAuthGuard } from 'src/auth/guard/optional-auth.guard';
 
 @Module({
+  imports: [JwtModule.register({})],
   controllers: [UserController],
   providers: [
+    OptionalAuthGuard,
     {
       provide: 'USER_SERVICE',
       inject: [ConfigService],

@@ -43,4 +43,14 @@ export class OrderController {
   async getOrderByUserId(userId: number) {
     return this.orderService.getOrdersByUserId(userId);
   }
+
+  @MessagePattern({ cmd: 'get-order-statistic' })
+  async getOrderStatistic() {
+    return this.orderService.getOrderStatistic();
+  }
+
+  @MessagePattern({ cmd: 'get-revenue-by-product-variant-ids' })
+  async getRevenueByProductVariantIds(productVariantIds: number[]) {
+    return this.orderService.getRevenueByProductVariantIds(productVariantIds);
+  }
 }

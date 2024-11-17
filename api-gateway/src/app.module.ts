@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { ProductModule } from './product/product.module';
@@ -11,6 +11,11 @@ import { PredictModule } from './predict/predict.module';
 import { ReviewModule } from './review/review.module';
 import { CartModule } from './cart/cart.module';
 import { VnpayModule } from './vnpay/vnpay.module';
+import { MailModule } from './mail/mail.module';
+import { JwtModule } from '@nestjs/jwt';
+import { PromotionModule } from './promotion/promotion.module';
+import { VoucherModule } from './voucher/voucher.module';
+import { DiscountModule } from './discount/discount.module';
 
 @Module({
   imports: [
@@ -29,6 +34,10 @@ import { VnpayModule } from './vnpay/vnpay.module';
     ReviewModule,
     CartModule,
     VnpayModule,
+    MailModule,
+    PromotionModule,
+    VoucherModule,
+    DiscountModule,
   ],
 })
 export class AppModule {}

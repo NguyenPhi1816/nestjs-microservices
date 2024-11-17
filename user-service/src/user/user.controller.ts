@@ -18,6 +18,11 @@ export class UserController {
     return this.userService.getProfile(userId);
   }
 
+  @MessagePattern({ cmd: 'get-profile-by-phone-number' })
+  getProfileByPhoneNumber(phoneNumber: string): any {
+    return this.userService.getProfileByPhoneNumber(phoneNumber);
+  }
+
   @MessagePattern({ cmd: 'update-user-status' })
   updateUserStatus(data: UpdateUserStatusReq) {
     return this.userService.updateUserStatus(data);

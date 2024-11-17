@@ -56,6 +56,51 @@ export class CategoryService {
     return response;
   }
 
+  async getCategoryByIds(ids: number[]): Promise<CategoryResponseDto[]> {
+    const categories = await this.prisma.category.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        image: true,
+        imageId: true,
+        description: true,
+        parent: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        _count: {
+          select: {
+            baseProductCategories: true,
+            children: true,
+          },
+        },
+      },
+    });
+    const response: CategoryResponseDto[] = categories.map((category) => {
+      return {
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        image: category.image,
+        imageId: category.imageId,
+        description: category.description,
+        parent: category.parent,
+        numberOfBaseProduct: category._count.baseProductCategories,
+        numberOfChildren: category._count.children,
+      };
+    });
+    return response;
+  }
+
   async getClientAllCategories(): Promise<ClientAllCategoryResponse[]> {
     const categories = await this.prisma.category.findMany({
       where: {

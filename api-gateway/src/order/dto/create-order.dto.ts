@@ -1,4 +1,6 @@
 export class CreateOrderDetailDto {
+  baseProductId: number;
+  categoryIds: number[];
   productVariantId: number;
   quantity: number;
   price: number;

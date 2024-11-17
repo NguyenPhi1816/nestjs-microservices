@@ -18,6 +18,7 @@ import TokenResponseDto from './dto/token-response.dto';
 import { AccessTokenGuard } from './guard/access-token.guard';
 import { GetUser } from './decorator/get-user.decorator';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdatePasswordByPhoneNumberDto } from './dto/update-password-by-phone-number.dto';
 
 @Controller('api/auth')
 export class AuthController {
@@ -73,6 +74,20 @@ export class AuthController {
   ) {
     return this.client
       .send({ cmd: 'update-password' }, { userId, requestBody })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response)),
+        ),
+      );
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Put('update-password-by-phone')
+  updatePasswordByPhoneNumber(
+    @Body() requestBody: UpdatePasswordByPhoneNumberDto,
+  ) {
+    return this.client
+      .send({ cmd: 'update-password-by-phone-number' }, requestBody)
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response)),

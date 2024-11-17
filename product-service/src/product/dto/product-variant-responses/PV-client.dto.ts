@@ -1,5 +1,6 @@
 export class ProductVariantResponseDto {
   id: number;
+  categoryIds: number[];
   slug: string;
   name: string;
   variantId: number;

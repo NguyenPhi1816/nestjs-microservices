@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -24,6 +25,10 @@ import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import AddBPImage from './dto/add-bp-image.dto';
 import UpdateProductVariantDto from './dto/update-product-variant.dto';
 import { Update_BaseProduct_Req } from './dto/update-bp.dto';
+import { OptionalAuthGuard } from 'src/auth/guard/optional-auth.guard';
+import GetProductStatisticsDto from './dto/get-product-statistics.dto';
+import GetPurchasesStatisticsDto from './dto/get-purchases-statistics.dto';
+import PriceChangeStatisticsDto from './dto/price-change-statistic.dto';
 
 @Controller('api')
 export class ProductController {
@@ -40,8 +45,9 @@ export class ProductController {
   }
 
   @Get('client/products/:slug')
-  getBPBySlug(@Param() param: { slug: string }) {
-    return this.productService.getBPBySlug(param.slug);
+  @UseGuards(OptionalAuthGuard)
+  getBPBySlug(@Param() param: { slug: string }, @Req() request: any) {
+    return this.productService.getBPBySlug(param.slug, request.user);
   }
 
   @Post('products')
@@ -180,7 +186,9 @@ export class ProductController {
   }
 
   @Get('products/search/:name')
+  @UseGuards(OptionalAuthGuard)
   searchProductByName(
+    @Req() request: any,
     @Param() param: { name: string },
     @Query('sortBy') sortBy: string,
     @Query('page') page: string = '1',
@@ -189,6 +197,7 @@ export class ProductController {
     @Query('toPrice') toPrice?: string,
   ) {
     return this.productService.searchProductByName(
+      request.user,
       param.name,
       Number.parseFloat(fromPrice),
       Number.parseFloat(toPrice),
@@ -196,5 +205,40 @@ export class ProductController {
       Number.parseInt(page),
       Number.parseInt(limit),
     );
+  }
+
+  @Post('products/statistics')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getProductStatistics(@Body() data: GetProductStatisticsDto) {
+    return this.productService.getProductStatistics(data);
+  }
+
+  @Post('products/purchases/statistics')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getPurchasesStatistics(@Body() data: GetPurchasesStatisticsDto) {
+    return this.productService.getPurchasesStatistics(data);
+  }
+
+  @Post('products/prices/statistics')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getPriceChangeStatistics(@Body() data: PriceChangeStatisticsDto) {
+    return this.productService.priceChangeStatistics(data);
+  }
+
+  @Get('products/top-10/most-purchased')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getTop10MostPurchasedProducts() {
+    return this.productService.getTop10MostPurchasedProducts();
+  }
+
+  @Get('categories/top-10/most-purchased')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getTop10MostPurchasedCategories() {
+    return this.productService.getTop10MostPurchasedCategories();
   }
 }
