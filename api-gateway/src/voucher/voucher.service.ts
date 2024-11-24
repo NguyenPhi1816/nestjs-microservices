@@ -33,4 +33,41 @@ export class VoucherService {
       }),
     );
   }
+
+  async deleteVoucher(voucherId: number) {
+    return this.promotionClient.send({ cmd: 'delete-voucher' }, voucherId).pipe(
+      catchError((error) => {
+        return throwError(() => new RpcException(error.response));
+      }),
+      map(async (response) => {
+        return response;
+      }),
+    );
+  }
+
+  async updateVoucherStatus(voucherId: number, status: string) {
+    return this.promotionClient
+      .send({ cmd: 'update-voucher-status' }, { voucherId, status })
+      .pipe(
+        catchError((error) => {
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      );
+  }
+
+  async getAvailableVouchers() {
+    return this.promotionClient
+      .send({ cmd: 'get-available-vouchers' }, {})
+      .pipe(
+        catchError((error) => {
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      );
+  }
 }

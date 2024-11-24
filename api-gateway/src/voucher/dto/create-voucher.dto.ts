@@ -5,6 +5,5 @@ export default class CreateVoucherDto {
   minOrderValue: number;
   maxDiscountValue: number;
   usageLimit: number;
-  status: string;
   promotionId: number;
 }

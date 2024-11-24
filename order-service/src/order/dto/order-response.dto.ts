@@ -12,4 +12,5 @@ export class OrderResponse {
   status: string;
   orderDetails: OrderDetailResponse[];
   payment: PaymentResponse;
+  voucherId: number;
 }

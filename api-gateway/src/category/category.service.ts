@@ -26,6 +26,7 @@ export class CategoryService {
   private mediaClient: ClientProxy;
   private reviewClient: ClientProxy;
   private orderClient: ClientProxy;
+  private promotionClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -56,6 +57,14 @@ export class CategoryService {
       options: {
         host: configService.get('ORDER_SERVICE_HOST'),
         port: configService.get('ORDER_SERVICE_PORT'),
+      },
+    });
+
+    this.promotionClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('PROMOTION_SERVICE_HOST'),
+        port: configService.get('PROMOTION_SERVICE_PORT'),
       },
     });
   }
@@ -198,6 +207,22 @@ export class CategoryService {
               ),
           );
 
+          const discount = await firstValueFrom(
+            this.promotionClient
+              .send({ cmd: 'get-applied-promotion-by-product-id' }, product.id)
+              .pipe(
+                catchError((error) =>
+                  throwError(() => new RpcException(error.message)),
+                ),
+                map((response) => {
+                  return response as {
+                    numberOfPurchases: number;
+                  };
+                }),
+              ),
+          );
+
+          product.discount = discount;
           product.averageRating = reviewSummary.averageRating;
           product.numberOfReviews = reviewSummary.numberOfReviews;
           product.numberOfPurchases = orderSummary.numberOfPurchases;
@@ -253,6 +278,22 @@ export class CategoryService {
             ),
         );
 
+        const discount = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'get-applied-promotion-by-product-id' }, product.id)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.discount = discount;
         product.averageRating = reviewSummary.averageRating;
         product.numberOfReviews = reviewSummary.numberOfReviews;
         product.numberOfPurchases = orderSummary.numberOfPurchases;

@@ -13,4 +13,7 @@ export class CreateOrderDetailDto {
   @IsNumber()
   @IsNotEmpty()
   price: number;
+
+  @IsInt()
+  discountId: number;
 }

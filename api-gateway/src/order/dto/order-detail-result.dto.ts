@@ -3,4 +3,5 @@ export class OrderDetailResult {
   productVariantId: number;
   quantity: number;
   price: number;
+  discountId: number;
 }

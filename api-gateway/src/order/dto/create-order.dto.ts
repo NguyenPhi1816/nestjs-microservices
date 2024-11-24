@@ -15,4 +15,5 @@ export class CreateOrderDto {
   receiverAddress: string;
   receiverPhoneNumber: string;
   orderDetails: CreateOrderDetailDto[];
+  totalAmount: number;
 }

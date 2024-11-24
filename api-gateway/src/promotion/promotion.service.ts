@@ -7,11 +7,12 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import CreatePromotionDto from './dto/create-promotion.dto';
-import { catchError, map, throwError } from 'rxjs';
+import { catchError, firstValueFrom, map, throwError } from 'rxjs';
 
 @Injectable()
 export class PromotionService {
   private promotionClient: ClientProxy;
+  private productClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.promotionClient = ClientProxyFactory.create({
@@ -19,6 +20,13 @@ export class PromotionService {
       options: {
         host: configService.get('PROMOTION_SERVICE_HOST'),
         port: configService.get('PROMOTION_SERVICE_PORT'),
+      },
+    });
+    this.productClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('PRODUCT_SERVICE_HOST'),
+        port: configService.get('PRODUCT_SERVICE_PORT'),
       },
     });
   }
@@ -46,15 +54,40 @@ export class PromotionService {
   }
 
   async getPromotionById(id: number) {
-    return this.promotionClient
-      .send({ cmd: 'get-promotion-by-id' }, { promotionId: id })
-      .pipe(
-        catchError((error) => {
-          return throwError(() => new RpcException(error.response));
-        }),
-        map(async (response) => {
-          return response;
-        }),
-      );
+    const promotion = await firstValueFrom(
+      this.promotionClient
+        .send({ cmd: 'get-promotion-by-id' }, { promotionId: id })
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        ),
+    );
+    promotion.discounts = await Promise.all(
+      promotion.discounts.map(async (discount) => {
+        const appliedProducts = await firstValueFrom(
+          this.productClient
+            .send(
+              { cmd: 'get-base-product-by-ids' },
+              discount.appliedBaseProductIds,
+            )
+            .pipe(
+              catchError((error) => {
+                return throwError(() => new RpcException(error.response));
+              }),
+              map(async (response) => {
+                return response;
+              }),
+            ),
+        );
+        delete discount.appliedBaseProductIds;
+        const result = { ...discount, appliedProducts };
+        return result;
+      }),
+    );
+    return promotion;
   }
 }

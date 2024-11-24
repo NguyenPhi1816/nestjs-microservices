@@ -1,4 +1,13 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { DiscountService } from './discount.service';
 import { AccessTokenGuard } from 'src/auth/guard/access-token.guard';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
@@ -23,5 +32,22 @@ export class DiscountController {
   @Roles(UserRole.ADMIN)
   applyDiscountToProducts(@Body() body: ApplyDiscountDto) {
     return this.discountService.applyDiscountToProducts(body);
+  }
+
+  @Delete(':id')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  deleteDiscount(@Param('id', ParseIntPipe) id: number) {
+    return this.discountService.deleteDiscount(id);
+  }
+
+  @Put('/:id/:status')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  updateDiscountStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('status') status: string,
+  ) {
+    return this.discountService.updateDiscountStatus(id, status);
   }
 }

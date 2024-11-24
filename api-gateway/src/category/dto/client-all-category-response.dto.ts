@@ -16,6 +16,7 @@ export class ClientCategoryProductResponse {
   numberOfPurchases: number;
   numberOfReviews: number;
   averageRating: number;
+  discount: any;
 }
 
 export class ClientAllCategoryResponse {

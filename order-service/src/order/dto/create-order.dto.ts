@@ -1,8 +1,11 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsInt,
   IsNotEmpty,
+  IsNumber,
   IsString,
+  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -36,8 +39,16 @@ export class CreateOrderDto {
   @IsNotEmpty()
   receiverPhoneNumber: string;
 
+  @IsInt()
+  voucherId: number;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrderDetailDto)
   orderDetails: CreateOrderDetailDto[];
+
+  @IsNumber()
+  @Min(0)
+  @IsNotEmpty()
+  totalAmount: number;
 }

@@ -7,5 +7,6 @@ export class OrderDetailResponse {
   optionValue: string[];
   quantity: number;
   price: number;
+  discount: any;
   review: ReviewResponse | null;
 }

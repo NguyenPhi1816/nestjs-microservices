@@ -51,6 +51,7 @@ export class OrderService {
             receiverName: createOrderDto.receiverName,
             receiverAddress: createOrderDto.receiverAddress,
             receiverPhoneNumber: createOrderDto.receiverPhoneNumber,
+            voucherId: createOrderDto.voucherId,
           },
         });
 
@@ -63,6 +64,7 @@ export class OrderService {
                 productVariantId: orderDetail.productVariantId,
                 quantity: orderDetail.quantity,
                 price: orderDetail.price,
+                discountId: orderDetail.discountId,
               },
             }),
         );
@@ -75,7 +77,7 @@ export class OrderService {
         );
         const payment = await prisma.payment.create({
           data: {
-            totalPrice: totalPrice,
+            totalPrice: createOrderDto.totalAmount,
             paymentMethod: createOrderDto.paymentMethod,
             status: PaymentStatus.PENDING,
             orderId: order.id,
@@ -143,12 +145,14 @@ export class OrderService {
           createAt: true,
           status: true,
           userId: true,
+          voucherId: true,
           orderDetails: {
             select: {
               id: true,
               productVariantId: true,
               quantity: true,
               price: true,
+              discountId: true,
             },
           },
           payment: {
@@ -176,6 +180,7 @@ export class OrderService {
             productVariantId: orderDetail.productVariantId,
             quantity: orderDetail.quantity,
             price: orderDetail.price,
+            discountId: orderDetail.discountId,
           };
         },
       );
@@ -198,6 +203,7 @@ export class OrderService {
         status: order.status,
         orderDetails: orderDetails,
         payment: payment,
+        voucherId: order.voucherId,
       };
       return response;
     } catch (error) {
@@ -230,12 +236,14 @@ export class OrderService {
           note: true,
           createAt: true,
           status: true,
+          voucherId: true,
           orderDetails: {
             select: {
               id: true,
               productVariantId: true,
               quantity: true,
               price: true,
+              discountId: true,
             },
           },
           payment: {
@@ -347,6 +355,7 @@ export class OrderService {
             productVariantId: orderDetail.productVariantId,
             quantity: orderDetail.quantity,
             price: orderDetail.price,
+            discountId: orderDetail.discountId,
           };
         },
       );
@@ -369,6 +378,7 @@ export class OrderService {
         status: result.status,
         orderDetails: orderDetails,
         payment: payment,
+        voucherId: result.voucherId,
       };
       return response;
     } catch (error) {

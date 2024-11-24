@@ -23,6 +23,7 @@ export class OrderService {
   private productClient: ClientProxy;
   private orderClient: ClientProxy;
   private userClient: ClientProxy;
+  private promotionClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -44,6 +45,13 @@ export class OrderService {
       options: {
         host: configService.get('USER_SERVICE_HOST'),
         port: configService.get('USER_SERVICE_PORT'),
+      },
+    });
+    this.promotionClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('PROMOTION_SERVICE_HOST'),
+        port: configService.get('PROMOTION_SERVICE_PORT'),
       },
     });
   }
@@ -97,6 +105,25 @@ export class OrderService {
         productVariantPromises,
       );
 
+      const discountPromises = order.orderDetails.map(
+        async (item) =>
+          item.discountId &&
+          firstValueFrom(
+            this.promotionClient
+              .send({ cmd: 'get-discount-by-id' }, item.discountId)
+              .pipe(
+                catchError((error) => {
+                  console.log(error);
+                  return throwError(() => new RpcException(error.response));
+                }),
+                map(async (response) => {
+                  return response;
+                }),
+              ),
+          ),
+      );
+      const discounts: any[] = await Promise.all(discountPromises);
+
       const orderDetailResponse: OrderDetailResponse[] = order.orderDetails.map(
         (item, index) => ({
           id: item.id,
@@ -106,14 +133,35 @@ export class OrderService {
           productName: productVariant[index].productName,
           quantity: item.quantity,
           review: null,
+          discount: item.discountId
+            ? discounts.find((discount) => discount.id == item.discountId)
+            : {},
         }),
       );
+
+      let voucher = {};
+      if (order.voucherId) {
+        voucher = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'get-voucher-by-id' }, order.voucherId)
+            .pipe(
+              catchError((error) => {
+                console.log(error);
+                return throwError(() => new RpcException(error.response));
+              }),
+              map(async (response) => {
+                return response;
+              }),
+            ),
+        );
+      }
 
       if (userProfile) {
         return {
           ...order,
           userName: userProfile.firstName + ' ' + userProfile.lastName,
           orderDetails: orderDetailResponse,
+          voucher,
         };
       }
     }
@@ -296,6 +344,24 @@ export class OrderService {
           const productVariant: Get_PV_Infor_Result[] = await Promise.all(
             productVariantPromises,
           );
+          const discountPromises = order.orderDetails.map(
+            async (item) =>
+              item.discountId &&
+              firstValueFrom(
+                this.promotionClient
+                  .send({ cmd: 'get-discount-by-id' }, item.discountId)
+                  .pipe(
+                    catchError((error) => {
+                      console.log(error);
+                      return throwError(() => new RpcException(error.response));
+                    }),
+                    map(async (response) => {
+                      return response;
+                    }),
+                  ),
+              ),
+          );
+          const discounts: any[] = await Promise.all(discountPromises);
 
           const orderDetailResponse: OrderDetailResponse[] =
             order.orderDetails.map((item, index) => ({
@@ -306,13 +372,34 @@ export class OrderService {
               productName: productVariant[index].productName,
               quantity: item.quantity,
               review: null,
+              discount: item.discountId
+                ? discounts.find((discount) => discount.id == item.discountId)
+                : {},
             }));
+
+          let voucher = {};
+          if (order.voucherId) {
+            voucher = await firstValueFrom(
+              this.promotionClient
+                .send({ cmd: 'get-voucher-by-id' }, order.voucherId)
+                .pipe(
+                  catchError((error) => {
+                    console.log(error);
+                    return throwError(() => new RpcException(error.response));
+                  }),
+                  map(async (response) => {
+                    return response;
+                  }),
+                ),
+            );
+          }
 
           if (userProfile) {
             return {
               ...order,
               userName: userProfile.firstName + ' ' + userProfile.lastName,
               orderDetails: orderDetailResponse,
+              voucher,
             };
           }
         }),

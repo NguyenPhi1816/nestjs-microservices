@@ -41,6 +41,7 @@ export class ProductService {
   private reviewClient: ClientProxy;
   private orderClient: ClientProxy;
   private userClient: ClientProxy;
+  private promotionClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.productClient = ClientProxyFactory.create({
@@ -76,6 +77,13 @@ export class ProductService {
       options: {
         host: configService.get('USER_SERVICE_HOST'),
         port: configService.get('USER_SERVICE_PORT'),
+      },
+    });
+    this.promotionClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('PROMOTION_SERVICE_HOST'),
+        port: configService.get('PROMOTION_SERVICE_PORT'),
       },
     });
   }
@@ -147,9 +155,48 @@ export class ProductService {
         ),
     );
 
+    const discount = await firstValueFrom(
+      this.promotionClient
+        .send({ cmd: 'get-applied-promotion-by-product-id' }, baseProduct.id)
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.message)),
+          ),
+          map((response) => {
+            return response as {
+              numberOfPurchases: number;
+            };
+          }),
+        ),
+    );
+
     baseProduct.averageRating = reviewSummary.averageRating;
     baseProduct.numberOfReviews = reviewSummary.numberOfReviews;
     baseProduct.numberOfPurchases = orderSummary.numberOfPurchases;
+    baseProduct.discount = discount;
+
+    await Promise.all(
+      baseProduct.relatedProducts.map(async (relatedProduct) => {
+        const _discount = await firstValueFrom(
+          this.promotionClient
+            .send(
+              { cmd: 'get-applied-promotion-by-product-id' },
+              relatedProduct.id,
+            )
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+        relatedProduct.discount = _discount;
+      }),
+    );
 
     if (user) {
       await Promise.all(
@@ -478,6 +525,22 @@ export class ProductService {
             ),
         );
 
+        const discount = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'get-applied-promotion-by-product-id' }, product.id)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.discount = discount;
         product.averageRating = reviewSummary.averageRating;
         product.numberOfReviews = reviewSummary.numberOfReviews;
         product.numberOfPurchases = orderSummary.numberOfPurchases;
@@ -543,7 +606,22 @@ export class ProductService {
               }),
             ),
         );
+        const discount = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'get-applied-promotion-by-product-id' }, product.id)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
 
+        product.discount = discount;
         product.averageRating = reviewSummary.averageRating;
         product.numberOfReviews = reviewSummary.numberOfReviews;
         product.numberOfPurchases = orderSummary.numberOfPurchases;
@@ -611,6 +689,22 @@ export class ProductService {
             ),
         );
 
+        const discount = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'get-applied-promotion-by-product-id' }, product.id)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.discount = discount;
         product.averageRating = reviewSummary.averageRating;
         product.numberOfReviews = reviewSummary.numberOfReviews;
         product.numberOfPurchases = orderSummary.numberOfPurchases;

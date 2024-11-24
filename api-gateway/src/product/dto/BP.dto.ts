@@ -36,6 +36,7 @@ export class ProductVariantResponseDto {
   averageRating: number;
   numberOfReviews: number;
   numberOfPurchases: number;
+  discount: any;
 }
 
 export class BaseProductVariantDto {
@@ -61,4 +62,5 @@ export class BaseProductResponseDto {
   optionValues: OptionValuesResponseDto[];
   relatedProducts: ProductVariantResponseDto[];
   productVariants: BaseProductVariantDto[];
+  discount: any;
 }

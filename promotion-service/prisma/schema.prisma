@@ -27,7 +27,7 @@ model Discount {
   id          Int    @id @default(autoincrement())
   type        String
   value       Float
-  status      String
+  status      String @default("ACTIVE")
   promotionId Int
 
   promotion            Promotion             @relation(fields: [promotionId], references: [id])
@@ -36,14 +36,14 @@ model Discount {
 
 model Voucher {
   id               Int    @id @default(autoincrement())
-  code             String
+  code             String @unique
   type             String
   value            Float
   minOrderValue    Float
   maxDiscountValue Float
   usageLimit       Int
-  usedCount        Int @default(0)
-  status           String
+  usedCount        Int    @default(0)
+  status           String @default("ACTIVE")
   promotionId      Int
 
   promotion Promotion @relation(fields: [promotionId], references: [id])

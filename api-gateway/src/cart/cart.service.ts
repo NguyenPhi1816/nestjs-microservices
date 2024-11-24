@@ -16,6 +16,7 @@ export class CartService {
   private orderClient: ClientProxy;
   private productClient: ClientProxy;
   private userClient: ClientProxy;
+  private promotionClient: ClientProxy;
 
   constructor(private configService: ConfigService) {
     this.orderClient = ClientProxyFactory.create({
@@ -39,10 +40,17 @@ export class CartService {
         port: configService.get('USER_SERVICE_PORT'),
       },
     });
+    this.promotionClient = ClientProxyFactory.create({
+      transport: Transport.TCP,
+      options: {
+        host: configService.get('PROMOTION_SERVICE_HOST'),
+        port: configService.get('PROMOTION_SERVICE_PORT'),
+      },
+    });
   }
 
   async getProductInfor(productVariantId: number) {
-    return firstValueFrom(
+    const product = await firstValueFrom(
       this.productClient
         .send({ cmd: 'get-product-variant-infor' }, productVariantId)
         .pipe(
@@ -55,6 +63,23 @@ export class CartService {
           }),
         ),
     );
+
+    const discount = await firstValueFrom(
+      this.promotionClient
+        .send({ cmd: 'get-applied-promotion-by-product-id' }, product.baseProductId)
+        .pipe(
+          catchError((error) =>
+            throwError(() => new RpcException(error.message)),
+          ),
+          map((response) => {
+            return response as {
+              numberOfPurchases: number;
+            };
+          }),
+        ),
+    );
+
+    return {...product, discount};
   }
 
   async getCartByUserId(userId: number) {

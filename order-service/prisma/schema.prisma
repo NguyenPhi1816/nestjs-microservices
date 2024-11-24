@@ -22,19 +22,21 @@ model Order {
   note                String?
   createAt            DateTime @default(now())
   status              String
+  voucherId           Int?
 
   orderDetails OrderDetail[]
   payment      Payment?
 }
 
 model OrderDetail {
-  id               Int @id @default(autoincrement())
+  id               Int   @id @default(autoincrement())
   orderId          Int
   productVariantId Int
   quantity         Int
-  price Float
+  price            Float
+  discountId       Int?
 
-  order          Order          @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
 }
 
 model Payment {

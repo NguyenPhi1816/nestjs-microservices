@@ -34,10 +34,6 @@ export default class CreateVoucherDto {
   @IsNotEmpty()
   usageLimit: number;
 
-  @IsEnum(VoucherStatus)
-  @IsNotEmpty()
-  status: VoucherStatus;
-
   @IsInt()
   @IsNotEmpty()
   promotionId: number;
