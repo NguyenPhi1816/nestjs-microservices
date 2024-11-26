@@ -17,6 +17,9 @@ import { OrderDetailResponse } from './dto/order-detail-response.dto';
 import { OrderStatus } from 'src/constrants/enum/order-status.enum';
 import { UserActivity } from 'src/constrants/enum/user-activity.enum';
 import { GetProductVariantResult } from 'src/review/dto/get-product-variant-result.dto';
+import { NotificationService } from 'src/notification/notification.service';
+import CreateNotificationDto from 'src/notification/dto/create-notification.dto';
+import { NotificationType } from 'src/constrants/enum/notification-type.enum';
 
 @Injectable()
 export class OrderService {
@@ -25,7 +28,10 @@ export class OrderService {
   private userClient: ClientProxy;
   private promotionClient: ClientProxy;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private notificationService: NotificationService,
+  ) {
     this.productClient = ClientProxyFactory.create({
       transport: Transport.TCP,
       options: {
@@ -247,6 +253,15 @@ export class OrderService {
         );
 
         if (updateResult) {
+          const createNotiReq: CreateNotificationDto = {
+            userId: Number.parseInt(this.configService.get('ADMIN_ID')),
+            receiverEmail: this.configService.get('ADMIN_EMAIL'),
+            type: NotificationType.NEW_ORDER,
+            message: `Bạn nhận được đơn hàng mới. Mã đơn hàng là #${createOrderResult.order.id}. Vui lòng kiểm tra đơn hàng.`,
+          };
+
+          this.notificationService.createNotification(createNotiReq);
+
           return createOrderResult;
         }
       }
@@ -290,8 +305,25 @@ export class OrderService {
           ),
       );
       if (updateResult) {
+        const notiReq: CreateNotificationDto = {
+          userId: Number.parseInt(this.configService.get('ADMIN_ID')),
+          receiverEmail: this.configService.get('ADMIN_EMAIL'),
+          type: NotificationType.CANCEL_ORDER,
+          message: `Đơn hàng #${result.id} đã bị hủy. Vui lòng kiểm tra đơn hàng.`,
+        };
+
+        this.notificationService.createNotification(notiReq);
         return result;
       }
+    } else if (result.status === OrderStatus.SUCCESS) {
+      const notiReq: CreateNotificationDto = {
+        userId: Number.parseInt(this.configService.get('ADMIN_ID')),
+        receiverEmail: this.configService.get('ADMIN_EMAIL'),
+        type: NotificationType.SUCCESS_ORDER,
+        message: `Đơn hàng #${result.id} đã được giao thành công.`,
+      };
+
+      this.notificationService.createNotification(notiReq);
     }
   }
 

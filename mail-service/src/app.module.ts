@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { MailModule } from './mail/mail.module';
 import { OtpModule } from './otp/otp.module';
 import { ConfigModule } from '@nestjs/config';
+import { PrismaModule } from './prisma/prisma.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -11,6 +13,8 @@ import { ConfigModule } from '@nestjs/config';
     }),
     MailModule,
     OtpModule,
+    PrismaModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

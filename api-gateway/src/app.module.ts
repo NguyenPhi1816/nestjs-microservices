@@ -16,6 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PromotionModule } from './promotion/promotion.module';
 import { VoucherModule } from './voucher/voucher.module';
 import { DiscountModule } from './discount/discount.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DiscountModule } from './discount/discount.module';
     PromotionModule,
     VoucherModule,
     DiscountModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

@@ -35,8 +35,7 @@ export class OrderController {
   }
 
   @Post()
-  @UseGuards(AccessTokenGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(AccessTokenGuard)
   createOrder(@GetUser('id') userId: number, @Body() data: CreateOrderDto) {
     return this.orderService.createOrder(userId, data);
   }
