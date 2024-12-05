@@ -17,6 +17,7 @@ import { PromotionModule } from './promotion/promotion.module';
 import { VoucherModule } from './voucher/voucher.module';
 import { DiscountModule } from './discount/discount.module';
 import { NotificationModule } from './notification/notification.module';
+import { BlogModule } from './blog/blog.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { NotificationModule } from './notification/notification.module';
     VoucherModule,
     DiscountModule,
     NotificationModule,
+    BlogModule,
   ],
 })
 export class AppModule {}

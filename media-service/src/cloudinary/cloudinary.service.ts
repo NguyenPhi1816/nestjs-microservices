@@ -69,6 +69,8 @@ export class CloudinaryService {
       path: item.secure_url as string,
     }));
 
+    console.log(res);
+
     return res;
   }
 

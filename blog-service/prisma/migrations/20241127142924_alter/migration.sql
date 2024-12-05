@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "BlogCategory" ALTER COLUMN "createAt" SET DEFAULT CURRENT_TIMESTAMP;

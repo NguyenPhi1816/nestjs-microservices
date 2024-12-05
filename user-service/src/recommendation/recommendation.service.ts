@@ -6,6 +6,8 @@ import UserSearchHistoryDto from './dto/user-search-history.dto';
 import GetProductStatisticsDto from './dto/get-product-statistics.dto';
 import GetPurchasesStatisticsDto from './dto/get-purchases-statistics.dto';
 import { UserActivity } from 'src/constrants/enum/user-activity.enum';
+import { normalizeName } from 'src/utils/normalize-name.util';
+import { getRecommendationProducts } from './recommendationHandling';
 
 @Injectable()
 export class RecommendationService {
@@ -118,6 +120,7 @@ export class RecommendationService {
         data: {
           userId: data.userId,
           searchQuery: data.searchQuery,
+          searchQueryNormalize: normalizeName(data.searchQuery),
         },
       });
       return { status: 200, message: 'Lưu thông tin thành công' };
@@ -125,4 +128,123 @@ export class RecommendationService {
       return { status: 200, message: 'Từ khóa không hợp lệ' };
     }
   }
+
+  // START OF RECOMMENDATION
+  async getActivitiesGroupedByUser() {
+    // Lấy tất cả các UserActivity
+    const activities = await this.prisma.userActivity.findMany({
+      select: {
+        userId: true,
+        productId: true,
+        activityType: true,
+        createdAt: true,
+      },
+    });
+
+    return activities.reduce((acc, item) => {
+      const { userId, productId, activityType, createdAt } = item;
+
+      const existUser = acc.find((i) => i.userId === item.userId);
+      if (!existUser) {
+        acc.push({
+          userId,
+          activities: [{ productId, activityType, createdAt }],
+        });
+
+        return acc;
+      }
+
+      existUser.activities.push({ productId, activityType, createdAt });
+      return acc;
+    }, []);
+  }
+
+  async recommendProducts(
+    userId: number,
+    baseProductIds: number[],
+    limit: number = 10,
+  ) {
+    // Lấy lịch sử hoạt động của người dùng
+    const activities = await this.getActivitiesGroupedByUser();
+
+    const _recommendProducts = getRecommendationProducts(
+      userId,
+      baseProductIds,
+      activities,
+      limit,
+    );
+
+    return _recommendProducts;
+  }
+  // END OF RECOMMENDATION
+
+  // START OF SEARCH RECOMMENDATION
+  async getUserSearchRecommend(userId?: number) {
+    let history = [];
+
+    if (userId) {
+      history = await this.prisma.userSearchHistory.findMany({
+        where: {
+          userId: userId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          searchQuery: true,
+        },
+      });
+
+      history = Array.from(
+        new Set(history.map((item) => item.searchQuery)),
+      ).slice(0, 5);
+    }
+
+    const popularKeywords = await this.prisma.userSearchHistory.groupBy({
+      by: ['searchQuery'],
+      _count: {
+        searchQuery: true,
+      },
+      orderBy: {
+        _count: {
+          searchQuery: 'desc',
+        },
+      },
+      take: 5,
+    });
+
+    const response = {
+      history: history,
+      popularKeywords: popularKeywords.map((item) => item.searchQuery),
+    };
+
+    return response;
+  }
+
+  async findRelatedKeywords(userInput: string = ''): Promise<string[]> {
+    const query = normalizeName(userInput);
+
+    const keywords = await this.prisma.userSearchHistory.findMany({
+      where: {
+        searchQueryNormalize: {
+          contains: query,
+          mode: 'insensitive',
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        searchQuery: true,
+      },
+    });
+
+    // Loại bỏ trùng lặp và giới hạn số lượng từ khóa
+    const uniqueKeywords = Array.from(
+      new Set(keywords.map((item) => item.searchQuery)),
+    ).slice(0, 10);
+
+    return uniqueKeywords;
+  }
+  // END OF SEARCH RECOMMENDATION
 }

@@ -35,4 +35,27 @@ export class RecommendationController {
   saveUserSearchHistory(data: UserSearchHistoryDto) {
     return this.recommendationService.saveUserSearchHistory(data);
   }
+
+  @MessagePattern({ cmd: 'recommend-products' })
+  recommendProducts(data: {
+    userId: number;
+    baseProductIds: number[];
+    limit?: number;
+  }) {
+    return this.recommendationService.recommendProducts(
+      data.userId,
+      data.baseProductIds,
+      data.limit,
+    );
+  }
+
+  @MessagePattern({ cmd: 'get-user-search-recommend' })
+  getUserSearchRecommend(data: { userId?: number }) {
+    return this.recommendationService.getUserSearchRecommend(data.userId);
+  }
+
+  @MessagePattern({ cmd: 'get-related-keywords' })
+  getRelatedKeywords(query: string = '') {
+    return this.recommendationService.findRelatedKeywords(query);
+  }
 }

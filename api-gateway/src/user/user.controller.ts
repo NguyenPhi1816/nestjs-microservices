@@ -181,4 +181,18 @@ export class UserController {
       );
     }
   }
+
+  @Get('get-user-search-recommend')
+  @UseGuards(OptionalAuthGuard)
+  getUserSearchRecommend(@Req() request: any) {
+    return this.client.send(
+      { cmd: 'get-user-search-recommend' },
+      request.user ? { userId: request.user.sub } : {},
+    );
+  }
+
+  @Get('get-related-search-keywords')
+  getRelatedSearchKeyword(@Query() data: { q: string }) {
+    return this.client.send({ cmd: 'get-related-keywords' }, data.q);
+  }
 }

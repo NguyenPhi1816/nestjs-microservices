@@ -29,6 +29,7 @@ import { OptionalAuthGuard } from 'src/auth/guard/optional-auth.guard';
 import GetProductStatisticsDto from './dto/get-product-statistics.dto';
 import GetPurchasesStatisticsDto from './dto/get-purchases-statistics.dto';
 import PriceChangeStatisticsDto from './dto/price-change-statistic.dto';
+import { GetUser } from 'src/auth/decorator/get-user.decorator';
 
 @Controller('api')
 export class ProductController {
@@ -240,5 +241,23 @@ export class ProductController {
   @Roles(UserRole.ADMIN)
   getTop10MostPurchasedCategories() {
     return this.productService.getTop10MostPurchasedCategories();
+  }
+
+  @Get('recommend-products')
+  @UseGuards(OptionalAuthGuard)
+  getRecommendProducts(
+    @Req() request: any,
+    @Query('limit') limit: string = '10',
+  ) {
+    let userId = -1;
+
+    if (request.user) {
+      userId = request.user.sub;
+    }
+
+    return this.productService.getRecommendProducts(
+      userId,
+      Number.parseInt(limit),
+    );
   }
 }

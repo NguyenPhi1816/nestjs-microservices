@@ -52,6 +52,20 @@ export class ProductService {
     }
   }
 
+  async getAllBaseProductIds(): Promise<number[]> {
+    try {
+      const result = await this.prisma.baseProduct.findMany({
+        select: {
+          id: true,
+        },
+      });
+      const response = result.map((item) => item.id);
+      return response;
+    } catch (error) {
+      throw new RpcException(new BadRequestException(error.message));
+    }
+  }
+
   async getBaseProductByIds(ids: number[]): Promise<List_BP_Admin_Res[]> {
     try {
       const responses: List_BP_Admin_Res[] =
@@ -702,6 +716,73 @@ export class ProductService {
     }
 
     return this.getBaseProducts(whereClause, limit, page, sortBy);
+  }
+
+  async getProductsByIds(ids: number[]): Promise<ProductVariantResponseDto[]> {
+    const baseProducts = await this.prisma.baseProduct.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        baseProductCategories: {
+          select: {
+            categoryId: true,
+          },
+        },
+        productVariants: {
+          select: {
+            id: true,
+            image: true,
+            prices: {
+              take: 1,
+              orderBy: {
+                createdAt: 'desc',
+              },
+              select: {
+                price: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let response: ProductVariantResponseDto[] = baseProducts
+      .map((baseProduct, index) => {
+        const productVariant = baseProduct.productVariants[0];
+
+        if (productVariant) {
+          return {
+            id: baseProduct.id,
+            categoryIds: baseProduct.baseProductCategories.map(
+              (item) => item.categoryId,
+            ),
+            image: productVariant.image,
+            name: baseProduct.name,
+            price: productVariant.prices[0].price,
+            slug: baseProduct.slug,
+            variantId: productVariant.id,
+            productVariantIds: baseProduct.productVariants.map(
+              (item) => item.id,
+            ),
+            averageRating: 0,
+            numberOfReviews: 0,
+            numberOfPurchases: 0,
+          };
+        }
+      })
+      .filter(Boolean) as ProductVariantResponseDto[];
+
+    response = ids
+      .map((id) => response.find((product) => product.id === id))
+      .filter(Boolean) as ProductVariantResponseDto[];
+
+    return response;
   }
 
   async getProductsByBrandSlug(

@@ -226,6 +226,7 @@ export class ProductService {
   }
 
   async createBaseProduct(data: CreateBaseProductDto) {
+    console.log(data);
     const fileBuffers = data.images.map((item) => item.buffer);
     const UploadRes: UploadResponse[] = await firstValueFrom(
       this.mediaClient.send({ cmd: 'upload' }, fileBuffers).pipe(
@@ -838,5 +839,99 @@ export class ProductService {
     }));
 
     return response;
+  }
+
+  async getRecommendProducts(userId: number, limit: number = 10) {
+    const baseProductIds = await firstValueFrom(
+      this.productClient.send({ cmd: 'get-all-base-product-ids' }, {}).pipe(
+        catchError((error) => {
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      ),
+    );
+
+    const productIds: number[] = await firstValueFrom(
+      this.userClient
+        .send({ cmd: 'recommend-products' }, { userId, baseProductIds, limit })
+        .pipe(
+          catchError((error) => {
+            return throwError(() => new RpcException(error.response));
+          }),
+          map(async (response) => {
+            return response;
+          }),
+        ),
+    );
+
+    const products = await firstValueFrom(
+      this.productClient.send({ cmd: 'get-products-by-ids' }, productIds).pipe(
+        catchError((error) => {
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      ),
+    );
+
+    await Promise.all(
+      products.map(async (product) => {
+        const reviewSummary = await firstValueFrom(
+          this.reviewClient
+            .send({ cmd: 'get-review-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfReviews: number;
+                  averageRating: number;
+                };
+              }),
+            ),
+        );
+
+        const orderSummary = await firstValueFrom(
+          this.orderClient
+            .send({ cmd: 'get-order-summary' }, product.productVariantIds)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        const discount = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'get-applied-promotion-by-product-id' }, product.id)
+            .pipe(
+              catchError((error) =>
+                throwError(() => new RpcException(error.message)),
+              ),
+              map((response) => {
+                return response as {
+                  numberOfPurchases: number;
+                };
+              }),
+            ),
+        );
+
+        product.discount = discount;
+        product.averageRating = reviewSummary.averageRating;
+        product.numberOfReviews = reviewSummary.numberOfReviews;
+        product.numberOfPurchases = orderSummary.numberOfPurchases;
+      }),
+    );
+
+    return products;
   }
 }

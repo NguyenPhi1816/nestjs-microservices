@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { BrandResponseDto } from './dto/brand-response.dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -6,6 +6,7 @@ import { normalizeName } from 'src/utils/normalize-name.util';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { BrandProductDto } from './dto/brand-product.dto';
 import { ProductService } from 'src/product/product.service';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class BrandService {
@@ -37,6 +38,18 @@ export class BrandService {
 
   async createBrand(createBrandDto: CreateBrandDto): Promise<BrandResponseDto> {
     try {
+      const existBrand = await this.prisma.brand.findUnique({
+        where: {
+          name: createBrandDto.name,
+        },
+      });
+
+      if (existBrand) {
+        throw new RpcException(
+          new ConflictException('Tên nhãn hàng đã tồn tại'),
+        );
+      }
+
       const brand = await this.prisma.brand.create({
         data: {
           name: createBrandDto.name,

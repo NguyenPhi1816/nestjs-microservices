@@ -20,6 +20,11 @@ export class ProductController {
     return this.productService.getAllBaseProduct();
   }
 
+  @MessagePattern({ cmd: 'get-all-base-product-ids' })
+  getAllBaseProductIds() {
+    return this.productService.getAllBaseProductIds();
+  }
+
   @MessagePattern({ cmd: 'get-base-product-by-ids' })
   getBaseProductByIds(ids: number[]) {
     return this.productService.getBaseProductByIds(ids);
@@ -165,5 +170,10 @@ export class ProductController {
   @MessagePattern({ cmd: 'price-change-statistics' })
   priceChangeStatistics(data: PriceChangeStatisticsDto) {
     return this.productService.priceChangeStatistics(data);
+  }
+
+  @MessagePattern({ cmd: 'get-products-by-ids' })
+  getProductsByIds(ids: number[]) {
+    return this.productService.getProductsByIds(ids);
   }
 }
