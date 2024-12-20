@@ -54,6 +54,33 @@ export class AuthController {
     );
   }
 
+  @Post('login-admin')
+  loginAdmin(@Body() body: LoginDto) {
+    return this.client.send({ cmd: 'login-admin' }, body).pipe(
+      catchError((error) => throwError(() => new RpcException(error.response))),
+      map(async (userInfo) => {
+        const accessToken = await this.authService.generateAccessToken(
+          userInfo as AuthResponseDto,
+        );
+
+        const response: TokenResponseDto = {
+          accessToken: accessToken,
+          expires: new Date(Date.now() + 3600000),
+          user: {
+            id: userInfo.id,
+            name: userInfo.name,
+            email: userInfo.email,
+            image: userInfo.image,
+          },
+          provider: 'local',
+          providerAccountId: userInfo.id,
+        };
+
+        return response;
+      }),
+    );
+  }
+
   @Post('register')
   register(@Body() body: RegisterDto) {
     return this.client

@@ -36,15 +36,20 @@ export class RecommendationController {
     return this.recommendationService.saveUserSearchHistory(data);
   }
 
+  @MessagePattern({ cmd: 'calc-recommendation-data' })
+  calcRecommendationData(baseProductIds: number[]) {
+    return this.recommendationService.calcRecommendationData(baseProductIds);
+  }
+
+  @MessagePattern({ cmd: 'get-matrix-data' })
+  getMatrixData() {
+    return this.recommendationService.getMatrixData();
+  }
+
   @MessagePattern({ cmd: 'recommend-products' })
-  recommendProducts(data: {
-    userId: number;
-    baseProductIds: number[];
-    limit?: number;
-  }) {
+  recommendProducts(data: { userId: number; limit?: number }) {
     return this.recommendationService.recommendProducts(
       data.userId,
-      data.baseProductIds,
       data.limit,
     );
   }

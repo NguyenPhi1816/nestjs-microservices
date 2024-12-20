@@ -189,6 +189,22 @@ export class OrderService {
     );
 
     if (isProductAvailable) {
+      if (data.voucherId) {
+        const applyResult = await firstValueFrom(
+          this.promotionClient
+            .send({ cmd: 'apply-voucher' }, data.voucherId)
+            .pipe(
+              catchError((error) => {
+                console.log(error);
+                return throwError(() => new RpcException(error.response));
+              }),
+              map(async (response) => {
+                return response;
+              }),
+            ),
+        );
+      }
+
       const request = {
         userId: userId,
         dto: data,
@@ -325,6 +341,8 @@ export class OrderService {
 
       this.notificationService.createNotification(notiReq);
     }
+
+    return result;
   }
 
   async getOrdersByUserId(userId: number) {

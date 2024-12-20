@@ -243,6 +243,20 @@ export class ProductController {
     return this.productService.getTop10MostPurchasedCategories();
   }
 
+  @Get('calc-recommendation-data')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  calcRecommendationData() {
+    return this.productService.calcRecommendationData();
+  }
+
+  @Get('get-matrix-data')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getMatrixData() {
+    return this.productService.getMatrixData();
+  }
+
   @Get('recommend-products')
   @UseGuards(OptionalAuthGuard)
   getRecommendProducts(

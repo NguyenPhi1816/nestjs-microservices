@@ -6,7 +6,8 @@
   <body>
     <script>
       const status = "{{status}}"; const code = "{{code}}";
-      window.location.replace(`http://localhost:3001/checkout/payment-status?orderId=9&status=${status}&code=${code}`);
+      //window.location.replace(`http://localhost:3001/checkout/payment-status?orderId=9&status=${status}&code=${code}`);
+      window.location.replace(`https://guds-client.vercel.app/checkout/payment-status?orderId=9&status=${status}&code=${code}`);
     </script>
   </body>
 </html>

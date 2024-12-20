@@ -7,7 +7,12 @@ import GetProductStatisticsDto from './dto/get-product-statistics.dto';
 import GetPurchasesStatisticsDto from './dto/get-purchases-statistics.dto';
 import { UserActivity } from 'src/constrants/enum/user-activity.enum';
 import { normalizeName } from 'src/utils/normalize-name.util';
-import { getRecommendationProducts } from './recommendationHandling';
+import {
+  calcRecommendationData,
+  checkUserRecommendationAvailable,
+  getMatrixData,
+  getRecommendationProducts,
+} from './recommendationHandling';
 
 @Injectable()
 export class RecommendationService {
@@ -71,9 +76,6 @@ export class RecommendationService {
           by: ['productId'],
           where: {
             activityType: activityType,
-            productId: {
-              not: null,
-            },
           },
           _count: {
             productId: true,
@@ -159,22 +161,35 @@ export class RecommendationService {
     }, []);
   }
 
-  async recommendProducts(
-    userId: number,
-    baseProductIds: number[],
-    limit: number = 10,
-  ) {
+  async calcRecommendationData(baseProductIds: number[]) {
     // Lấy lịch sử hoạt động của người dùng
     const activities = await this.getActivitiesGroupedByUser();
 
+    const matrix = calcRecommendationData(baseProductIds, activities);
+
+    return matrix;
+  }
+
+  async recommendProducts(userId: number, limit: number = 10) {
+    // Lấy lịch sử hoạt động của người dùng
+    const activities = await this.getActivitiesGroupedByUser();
+    const isRecommendationAvailable = checkUserRecommendationAvailable(userId);
+
+    if (!isRecommendationAvailable) {
+      userId = -1;
+    }
+
     const _recommendProducts = getRecommendationProducts(
       userId,
-      baseProductIds,
       activities,
       limit,
     );
 
     return _recommendProducts;
+  }
+
+  async getMatrixData() {
+    return getMatrixData();
   }
   // END OF RECOMMENDATION
 

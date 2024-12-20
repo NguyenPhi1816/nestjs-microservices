@@ -37,4 +37,9 @@ export class VoucherController {
   getAvailableVouchers() {
     return this.voucherService.getAvailableVouchers();
   }
+
+  @MessagePattern({ cmd: 'apply-voucher' })
+  applyVoucher(voucherId: number) {
+    return this.voucherService.applyVoucher(voucherId);
+  }
 }

@@ -60,6 +60,48 @@ export class AuthService {
     return response;
   }
 
+  async loginAdmin(data: LoginDto) {
+    // find account by phone number
+    const account = await this.prisma.account.findUnique({
+      where: {
+        userPhoneNumber: data.phoneNumber,
+        userRole: {
+          name: UserRole.ADMIN,
+        },
+      },
+      include: {
+        user: true,
+        userRole: true,
+      },
+    });
+
+    // throw exception if account not found
+    if (!account) {
+      throw new RpcException(
+        new UnauthorizedException('Phone number not found.'),
+      );
+    }
+
+    // compare password
+    const pwMatches = await argon.verify(account.password, data.password);
+
+    // throw exception if password incorrect
+    if (!pwMatches) {
+      throw new RpcException(new UnauthorizedException('Password incorrect.'));
+    }
+
+    const response: AuthResponseDto = {
+      id: account.user.id,
+      name: account.user.firstName + ' ' + account.user.lastName,
+      email: account.user.email,
+      image: account.user.image,
+      role: account.userRole.name,
+      status: account.status,
+    };
+
+    return response;
+  }
+
   async register(data: RegisterDto) {
     try {
       const result = await this.prisma.$transaction(async (prisma) => {

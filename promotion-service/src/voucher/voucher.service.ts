@@ -199,4 +199,35 @@ export class VoucherService {
 
     return availableVouchers;
   }
+
+  async applyVoucher(voucherId: number) {
+    const voucher = await this.prisma.voucher.findUnique({
+      where: {
+        id: voucherId,
+      },
+      select: {
+        usageLimit: true,
+        usedCount: true,
+      },
+    });
+
+    if (voucher.usedCount >= voucher.usageLimit) {
+      throw new RpcException(
+        new ConflictException('Phiếu mua hàng đã được sử dụng hết'),
+      );
+    }
+
+    const updatedVoucher = await this.prisma.voucher.update({
+      where: {
+        id: voucherId,
+      },
+      data: {
+        usedCount: {
+          increment: 1,
+        },
+      },
+    });
+
+    return { message: 'Áp dụng phiếu mua hàng thành công', status: 200 };
+  }
 }

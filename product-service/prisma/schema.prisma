@@ -66,8 +66,8 @@ model Brand {
 model BaseProductImage {
   id            Int     @id @default(autoincrement())
   path          String
-  isDefault     Boolean
   publicId      String  @unique
+  isDefault     Boolean
   baseProductId Int
 
   baseProduct BaseProduct @relation(fields: [baseProductId], references: [id])

@@ -69,39 +69,29 @@ export class CloudinaryService {
       path: item.secure_url as string,
     }));
 
-    console.log(res);
-
     return res;
   }
 
-  async deleteImage(publicId: string): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+  async deleteImage(publicId: string): Promise<{ message: string }> {
+    return new Promise<{ message: string }>((resolve, reject) => {
       cloudinary.uploader.destroy(publicId, (error, result) => {
         if (error) {
           this.logger.error(
             `Failed to delete image with id ${publicId}:`,
             error,
           );
-          return reject(
-            new RpcException(
-              new HttpException('Delete Failed', HttpStatus.BAD_REQUEST),
-            ),
-          );
+          return resolve({ message: 'Image not found or already deleted' });
         }
 
         if (result.result !== 'ok') {
           this.logger.warn(
             `Delete failed or image not found for id ${publicId}`,
           );
-          return reject(
-            new RpcException(
-              new HttpException('Delete Failed', HttpStatus.NOT_FOUND),
-            ),
-          );
+          return resolve({ message: 'Image not found or already deleted' });
         }
 
         this.logger.log(`Image with id ${publicId} deleted successfully`);
-        resolve();
+        return resolve({ message: 'Image deleted successfully' });
       });
     });
   }

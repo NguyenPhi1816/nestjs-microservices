@@ -9,10 +9,10 @@ import NewNotification from './dto/new-message.dto';
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    origin: ['https://guds-admin.vercel.app', 'http://localhost:3000'],
     credentials: true,
   },
+  transports: ['websocket'],
 })
 export class NotificationGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -40,6 +40,7 @@ export class NotificationGateway
   }
 
   sendNotificationToUser(data: NewNotification) {
+    console.log(this.server._opts.cors);
     this.server.to(data.userId.toString()).emit('new-notification', data);
   }
 }

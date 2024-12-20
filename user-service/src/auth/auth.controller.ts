@@ -15,6 +15,11 @@ export class AuthController {
     return this.authService.login(data);
   }
 
+  @MessagePattern({ cmd: 'login-admin' })
+  loginAdmin(data: LoginDto): any {
+    return this.authService.loginAdmin(data);
+  }
+
   @MessagePattern({ cmd: 'register' })
   register(data: RegisterDto): any {
     return this.authService.register(data);

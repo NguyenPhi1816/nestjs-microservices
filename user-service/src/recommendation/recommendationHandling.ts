@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 type TUserActivity = {
   userId: number;
   activities: {
@@ -11,6 +13,10 @@ type ProductScore = {
   productId: number;
   productScore: number;
 };
+
+type UserProductScores = { userId: number; productScores: ProductScore[] };
+
+const outputFileName = 'recommendationMatrix.json';
 
 const activityWeights: Record<string, number> = {
   PURCHASE: 1.0,
@@ -85,22 +91,43 @@ function calculateTopProducts(
   return sortedProductScores.slice(0, topN).map((item) => item.productId);
 }
 
+function normalizeMinMaxCustom(
+  users: UserProductScores[],
+  minRange: number = 0.2,
+  maxRange: number = 1,
+): UserProductScores[] {
+  return users.map((user) => {
+    const scores = user.productScores.map((p) => p.productScore);
+    const minScore = Math.min(...scores);
+    const maxScore = Math.max(...scores);
+
+    return {
+      userId: user.userId,
+      productScores: user.productScores.map((p) => ({
+        productId: p.productId,
+        productScore:
+          maxScore !== minScore
+            ? minRange +
+              ((p.productScore - minScore) * (maxRange - minRange)) /
+                (maxScore - minScore)
+            : 1, // Nếu max = min, gán 0
+      })),
+    };
+  });
+}
+
 // Function to build the utility matrix
 function buildUtilityMatrix(
   productScores: { userId: number; productScores: ProductScore[] }[],
   productIds: number[],
 ) {
+  productScores = normalizeMinMaxCustom(productScores);
+
   // Initialize an empty matrix
   const utilityMatrix: Record<number, Record<number, number>> = {};
 
   // Populate the matrix
   productScores.forEach((userEntry) => {
-    const avgScore =
-      userEntry.productScores.reduce(
-        (prev, curr) => prev + curr.productScore,
-        0,
-      ) / userEntry.productScores.length;
-
     const { userId, productScores } = userEntry;
     // Initialize the user's row with default 0 scores
     utilityMatrix[userId] = productIds.reduce(
@@ -114,11 +141,6 @@ function buildUtilityMatrix(
     // Update the scores for the user's products
     productScores.forEach(({ productId, productScore }) => {
       let myProductScore = productScore;
-
-      if (productIds.includes(productId)) {
-        myProductScore = myProductScore - avgScore;
-      }
-
       utilityMatrix[userId][productId] = myProductScore;
     });
   });
@@ -146,6 +168,7 @@ function calculateUserSimilarityMatrix(vectors: number[][], userIds: string[]) {
 
   for (let i = 0; i < numUsers; i++) {
     similarityMatrix[userIds[i]] = {};
+
     for (let j = 0; j < numUsers; j++) {
       if (i === j) {
         similarityMatrix[userIds[i]][userIds[j]] = 1; // Self-similarity is always 1
@@ -163,27 +186,18 @@ function calculateUserSimilarityMatrix(vectors: number[][], userIds: string[]) {
 
 function findKNearestUsers(
   userId: string,
-  productId: string,
-  utilityMatrix: Record<number, Record<number, number>>,
   similarityMatrix: Record<string, Record<string, number>>,
   k: number,
-): { userId: string; similarity: number; normalizedScore: number }[] {
+): { userId: string; similarity: number }[] {
   // Get list users and similarity
   const similarities = Object.entries(similarityMatrix[userId])
-    .filter(([otherUserId]) => {
-      if (otherUserId === userId) return false; // Remove self-similarity
-
-      // Check if the other user has at least one score != 0 in the utility matrix
-      const userScore = utilityMatrix[otherUserId][productId];
-      return userScore != 0;
+    .filter(([otherUserId, score]) => {
+      return otherUserId !== userId; // Remove self-similarity
     })
     .map(([otherUserId, similarity]) => {
-      const normalizedScore = utilityMatrix[otherUserId][productId];
-
       return {
         userId: otherUserId,
         similarity,
-        normalizedScore,
       };
     });
 
@@ -194,31 +208,22 @@ function findKNearestUsers(
   return similarities.slice(0, k);
 }
 
-// function findNormalizedScore()
-
 function predictMissingScore(
   utilityMatrix: Record<number, Record<number, number>>,
   similarityMatrix: Record<string, Record<string, number>>,
 ) {
   for (const userId in utilityMatrix) {
+    const simUsers: {
+      userId: string;
+      similarity: number;
+    }[] = findKNearestUsers(userId, similarityMatrix, k);
+
     for (const productId in utilityMatrix[userId]) {
       if (utilityMatrix[userId][productId] === 0) {
-        const simUsers: {
-          userId: string;
-          similarity: number;
-          normalizedScore: number;
-        }[] = findKNearestUsers(
-          userId,
-          productId,
-          utilityMatrix,
-          similarityMatrix,
-          k,
-        );
-
-        const a = simUsers.reduce(
-          (acc, simUser) => acc + simUser.similarity * simUser.normalizedScore,
-          0,
-        );
+        const a = simUsers.reduce((acc, simUser) => {
+          const normalizedScore = utilityMatrix[simUser.userId][productId];
+          return acc + simUser.similarity * normalizedScore;
+        }, 0);
         const b = simUsers.reduce(
           (acc, simUser) => acc + Math.abs(simUser.similarity),
           0,
@@ -229,7 +234,10 @@ function predictMissingScore(
           continue;
         }
 
-        utilityMatrix[userId][productId] = a / b;
+        // Trừ giá trị đã dự đoán cho 1 để
+        //    + Tăng độ ưu tiên cho các sản phẩm mà người dùng đã tương tác trong quá khứ
+        //    + Giảm độ ưu tiên đối với các sản phẩm chưa được tương tác
+        utilityMatrix[userId][productId] = a / b - 1;
         continue;
       }
     }
@@ -237,11 +245,21 @@ function predictMissingScore(
   return utilityMatrix;
 }
 
-export function getRecommendationProducts(
-  userId: number,
+function saveJsonToFile(fileName: string, jsonData: object) {
+  const jsonString = JSON.stringify(jsonData, null, 2);
+
+  fs.writeFileSync(fileName, jsonString, 'utf8');
+}
+
+function readJsonFromFile(fileName: string) {
+  const data = fs.readFileSync(fileName, 'utf8');
+  const jsonData = JSON.parse(data);
+  return jsonData;
+}
+
+export function calcRecommendationData(
   baseProductIds: number[],
   userActivities: TUserActivity[],
-  limit: number = 10,
 ) {
   const calculatedProductScores = calculateProductScores(userActivities);
 
@@ -249,6 +267,8 @@ export function getRecommendationProducts(
     calculatedProductScores,
     baseProductIds,
   );
+
+  const _utilityMatrix = JSON.stringify(utilityMatrix);
 
   // Convert Utility Matrix to an array for easier processing
   const _userIds = Object.keys(utilityMatrix);
@@ -267,21 +287,50 @@ export function getRecommendationProducts(
     userSimilarityMatrix,
   );
 
+  saveJsonToFile(outputFileName, {
+    calculatedProductScores,
+    utilityMatrix: JSON.parse(_utilityMatrix),
+    userSimilarityMatrix,
+    completedMatrix,
+  });
+
+  return completedMatrix;
+}
+
+export function getRecommendationProducts(
+  userId: number,
+  userActivities: TUserActivity[],
+  limit: number = 10,
+) {
   if (userId != -1) {
+    const completedMatrix = readJsonFromFile(outputFileName)
+      .completedMatrix as Record<number, Record<number, number>>;
+
     const userVector = completedMatrix[userId];
     const sortedVectorEntries = Object.entries(userVector).sort(
       ([, valueA], [, valueB]) => valueB - valueA,
     );
-    const sortedVector = Object.fromEntries(sortedVectorEntries);
 
-    // console.log(sortedVector);
-
-    const recommendProductIds: number[] = Object.keys(sortedVector)
-      .slice(0, limit)
-      .map((id) => Number.parseInt(id));
+    const recommendProductIds: number[] = sortedVectorEntries
+      .map((item) => Number.parseInt(item[0]))
+      .slice(0, limit);
 
     return recommendProductIds;
   } else {
     return calculateTopProducts(userActivities, limit);
   }
+}
+
+export function checkUserRecommendationAvailable(userId: number) {
+  const completedMatrix = readJsonFromFile(outputFileName)
+    .completedMatrix as Record<number, Record<number, number>>;
+
+  const userVector = completedMatrix[userId];
+  return userVector && Object.keys(userVector).length > 0;
+}
+
+export function getMatrixData() {
+  const completedMatrix = readJsonFromFile(outputFileName)
+    .completedMatrix as Record<number, Record<number, number>>;
+  return completedMatrix;
 }

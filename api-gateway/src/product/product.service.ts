@@ -841,7 +841,7 @@ export class ProductService {
     return response;
   }
 
-  async getRecommendProducts(userId: number, limit: number = 10) {
+  async calcRecommendationData() {
     const baseProductIds = await firstValueFrom(
       this.productClient.send({ cmd: 'get-all-base-product-ids' }, {}).pipe(
         catchError((error) => {
@@ -853,9 +853,33 @@ export class ProductService {
       ),
     );
 
+    return this.userClient
+      .send({ cmd: 'calc-recommendation-data' }, baseProductIds)
+      .pipe(
+        catchError((error) => {
+          return throwError(() => new RpcException(error.response));
+        }),
+        map(async (response) => {
+          return response;
+        }),
+      );
+  }
+
+  async getMatrixData() {
+    return this.userClient.send({ cmd: 'get-matrix-data' }, {}).pipe(
+      catchError((error) => {
+        return throwError(() => new RpcException(error.response));
+      }),
+      map(async (response) => {
+        return response;
+      }),
+    );
+  }
+
+  async getRecommendProducts(userId: number, limit: number = 10) {
     const productIds: number[] = await firstValueFrom(
       this.userClient
-        .send({ cmd: 'recommend-products' }, { userId, baseProductIds, limit })
+        .send({ cmd: 'recommend-products' }, { userId, limit })
         .pipe(
           catchError((error) => {
             return throwError(() => new RpcException(error.response));

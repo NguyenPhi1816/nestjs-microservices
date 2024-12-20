@@ -16,4 +16,5 @@ export class CreateOrderDto {
   receiverPhoneNumber: string;
   orderDetails: CreateOrderDetailDto[];
   totalAmount: number;
+  voucherId: number | null;
 }
